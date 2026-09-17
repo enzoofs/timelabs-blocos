@@ -40,18 +40,22 @@ export default function Cadastrar() {
     }
     setBusy(true)
 
-    const { data: bloco, error: insertErr } = await supabase
-      .from('blocos')
-      .insert({
-        name: name.trim(),
-        slug: slug.trim(),
-        city: city.trim() || null,
-        contact_name: contactName.trim() || null,
-        contact_email: email.trim().toLowerCase(),
-        theme: { primary, accent },
-      })
-      .select('id, slug, name')
-      .single()
+    // Gera o id no navegador: a tabela não deixa ninguém ler de volta o que
+    // acabou de cadastrar (só o webhook do Stripe, com a service role, lê
+    // dados sensíveis), então não dá pra usar .select() depois do insert.
+    const blocoId = crypto.randomUUID()
+    const trimmedSlug = slug.trim()
+    const trimmedName = name.trim()
+
+    const { error: insertErr } = await supabase.from('blocos').insert({
+      id: blocoId,
+      name: trimmedName,
+      slug: trimmedSlug,
+      city: city.trim() || null,
+      contact_name: contactName.trim() || null,
+      contact_email: email.trim().toLowerCase(),
+      theme: { primary, accent },
+    })
 
     if (insertErr) {
       setBusy(false)
@@ -65,9 +69,9 @@ export default function Cadastrar() {
 
     try {
       const { url } = await createCheckoutSession({
-        blocoId: bloco.id,
-        blocoSlug: bloco.slug,
-        blocoName: bloco.name,
+        blocoId,
+        blocoSlug: trimmedSlug,
+        blocoName: trimmedName,
         email: email.trim().toLowerCase(),
         plan,
         months,
