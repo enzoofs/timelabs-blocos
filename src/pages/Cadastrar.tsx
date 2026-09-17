@@ -65,6 +65,7 @@ export default function Cadastrar() {
 
     try {
       const { url } = await createCheckoutSession({
+        blocoId: bloco.id,
         blocoSlug: bloco.slug,
         blocoName: bloco.name,
         email: email.trim().toLowerCase(),

@@ -8,9 +8,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  const { blocoSlug, blocoName, email, plan } = (req.body ?? {}) as Record<string, unknown>
+  const { blocoId, blocoSlug, blocoName, email, plan } = (req.body ?? {}) as Record<string, unknown>
 
   if (
+    typeof blocoId !== 'string' ||
     typeof blocoSlug !== 'string' ||
     typeof blocoName !== 'string' ||
     typeof email !== 'string' ||
@@ -55,6 +56,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ],
       success_url: `${origin}/inscricao/sucesso?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/inscricao/cancelado`,
+    }, {
+      // Clique duplo ou retry de rede pro mesmo bloco + plano reaproveita a
+      // mesma sessão em vez de criar uma cobrança nova. Se a pessoa mudar
+      // de plano, a chave muda e uma sessão nova é criada normalmente.
+      idempotencyKey: `checkout:${blocoId}:${plan}`,
     })
 
     if (!session.url) throw new Error('Stripe não retornou URL de checkout.')

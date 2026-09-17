@@ -14,6 +14,7 @@ export function getStripe() {
 export type CheckoutPlan = 'monthly' | 'lump_sum'
 
 export type CreateCheckoutInput = {
+  blocoId: string // id do registro pendente em public.blocos — usado como chave de idempotência
   blocoSlug: string
   blocoName: string
   email: string
