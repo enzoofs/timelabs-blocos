@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import type Stripe from 'stripe'
-import { stripeAdmin } from '../server/stripeAdmin'
-import { supabaseAdmin } from '../server/supabaseAdmin'
-import { monthsUntil, nextCarnaval } from '../src/lib/pricing'
+import { stripeAdmin } from '../server/stripeAdmin.js'
+import { supabaseAdmin } from '../server/supabaseAdmin.js'
+import { monthsUntil, nextCarnaval } from '../src/lib/pricing.js'
 
 // Precisa do corpo cru pra verificar a assinatura do Stripe — desliga
 // o parser automático do Vercel.

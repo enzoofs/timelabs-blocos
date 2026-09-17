@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { stripeAdmin } from '../server/stripeAdmin'
-import { supabaseAdmin } from '../server/supabaseAdmin'
+import { stripeAdmin } from '../server/stripeAdmin.js'
+import { supabaseAdmin } from '../server/supabaseAdmin.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sessionId = req.query.session_id
