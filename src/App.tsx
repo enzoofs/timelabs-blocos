@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Home from './pages/Home'
 import Cadastrar from './pages/Cadastrar'
+import Cobrar from './pages/Cobrar'
 import Sucesso from './pages/Sucesso'
 import Cancelado from './pages/Cancelado'
 import BlocoApp from './BlocoApp'
@@ -11,6 +12,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/cadastrar" element={<Cadastrar />} />
+        <Route path="/cobrar/:blocoSlug" element={<Cobrar />} />
         <Route path="/inscricao/sucesso" element={<Sucesso />} />
         <Route path="/inscricao/cancelado" element={<Cancelado />} />
         <Route path="/:blocoSlug/*" element={<BlocoApp />} />

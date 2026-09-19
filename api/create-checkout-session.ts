@@ -3,6 +3,12 @@ import { stripeAdmin } from '../server/stripeAdmin.js'
 import { supabaseAdmin } from '../server/supabaseAdmin.js'
 import { MONTHLY_PRICE, lumpSumPrice, monthsUntil, nextCarnaval } from '../src/lib/pricing.js'
 
+// Blocos que já estavam ativos antes de existir checkout (migrados
+// direto no banco) e agora precisam de uma cobrança retroativa. Só
+// esses dois podem gerar sessão pra um bloco 'active' — qualquer
+// outro bloco 'active' tentando recobrar cai fora daqui.
+const ALLOWED_EXISTING_SLUGS = ['abalo-caxi', 'lavo-ta-novo']
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' })
@@ -22,20 +28,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  // Confere que existe mesmo um cadastro pendente com esse id/slug antes
-  // de gerar sessão de pagamento — sem isso, dava pra chamar essa rota
-  // direto com dados inventados e criar sessões do Stripe pra blocos
-  // que não existem.
+  // Confere que existe mesmo um bloco com esse id/slug antes de gerar
+  // sessão de pagamento — sem isso, dava pra chamar essa rota direto com
+  // dados inventados e criar sessões do Stripe pra blocos que não
+  // existem.
   const admin = supabaseAdmin()
   const { data: bloco, error: blocoError } = await admin
     .from('blocos')
-    .select('id')
+    .select('id, status')
     .eq('id', blocoId)
     .eq('slug', blocoSlug)
-    .eq('status', 'pending')
     .maybeSingle()
 
   if (blocoError || !bloco) {
+    res.status(404).json({ error: 'Cadastro do bloco não encontrado. Preenche o formulário de novo.' })
+    return
+  }
+
+  if (bloco.status === 'active' && !ALLOWED_EXISTING_SLUGS.includes(blocoSlug)) {
+    res.status(403).json({ error: 'Esse bloco já está ativo e não precisa de um novo pagamento.' })
+    return
+  }
+
+  if (bloco.status !== 'pending' && bloco.status !== 'active') {
     res.status(404).json({ error: 'Cadastro do bloco não encontrado. Preenche o formulário de novo.' })
     return
   }
