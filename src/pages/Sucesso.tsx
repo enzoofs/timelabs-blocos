@@ -11,6 +11,7 @@ export default function Sucesso() {
   const [blocoName, setBlocoName] = useState<string | null>(null)
   const [blocoSlug, setBlocoSlug] = useState<string | null>(null)
   const [attempts, setAttempts] = useState(0)
+  const [videoDismissed, setVideoDismissed] = useState(false)
 
   useEffect(() => {
     if (!sessionId) return
@@ -45,6 +46,29 @@ export default function Sucesso() {
     const t = setTimeout(() => setAttempts((a) => a + 1), 2500)
     return () => clearTimeout(t)
   }, [status])
+
+  if (status === 'active' && !videoDismissed) {
+    return (
+      <div className="min-h-full bg-tl-paper flex flex-col items-center justify-center px-6 py-10">
+        <div className="max-w-xs w-full bg-white border-2 border-tl-ink rounded-[10px] p-5 text-center">
+          <p className="font-display text-sm text-tl-ink mb-1">PAGAMENTO CONFIRMADO ✓</p>
+          <p className="text-xs text-tl-muted mb-4">Um tour rápido por tudo que você pode fazer:</p>
+          <video
+            src="/videos/tutorial-diretoria.mp4"
+            controls
+            playsInline
+            autoPlay
+            onEnded={() => setVideoDismissed(true)}
+            className="w-full rounded-lg border-2 border-tl-ink"
+          />
+          <Button onClick={() => setVideoDismissed(true)} variant="secondary" className="w-full mt-4">
+            PULAR
+          </Button>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-full bg-tl-paper flex flex-col items-center justify-center px-6 py-16">

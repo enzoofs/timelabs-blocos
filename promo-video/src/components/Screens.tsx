@@ -301,6 +301,133 @@ const FakeQR: React.FC<{ size: number }> = ({ size }) => (
   </div>
 )
 
+export const ScreenNovoEvento: React.FC = () => {
+  const frame = useCurrentFrame()
+  const fieldsIn = (i: number) => interpolate(frame, [i * 10, i * 10 + 15], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+  const fields = ['NOME', 'INÍCIO', 'FIM', 'LOCALIZAÇÃO', 'RAIO (METROS)']
+  return (
+    <div style={{ width: '100%', height: '100%', background: BRAND.paper, position: 'relative', padding: '70px 26px 26px' }}>
+      <div
+        style={{
+          display: 'inline-block',
+          transform: 'rotate(-2deg)',
+          background: BRAND.ink,
+          color: BRAND.lime,
+          padding: '6px 16px',
+          borderRadius: 6,
+          fontSize: 13,
+          marginBottom: 20,
+          ...display,
+        }}
+      >
+        NOVO ENSAIO
+      </div>
+      {fields.map((label, i) => {
+        const appear = fieldsIn(i)
+        return (
+          <div key={label} style={{ marginBottom: 18, opacity: appear, transform: `translateY(${(1 - appear) * 14}px)` }}>
+            <div style={{ ...sans, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>{label}</div>
+            <div style={{ height: label === 'LOCALIZAÇÃO' ? 90 : 40, borderRadius: 10, border: `2px solid ${BRAND.ink}`, background: '#fff' }} />
+          </div>
+        )
+      })}
+      <div
+        style={{
+          marginTop: 10,
+          height: 50,
+          borderRadius: 10,
+          background: BRAND.violet,
+          border: `2.5px solid ${BRAND.ink}`,
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 15,
+          opacity: fieldsIn(fields.length),
+          ...display,
+        }}
+      >
+        CRIAR ENSAIO
+      </div>
+    </div>
+  )
+}
+
+export const ScreenMembros: React.FC = () => {
+  const frame = useCurrentFrame()
+  const names = ['Maria Silva', 'João Santos', 'Ana Pereira']
+  const importGlow = interpolate(frame % 60, [0, 30, 60], [0.5, 1, 0.5])
+  return (
+    <div style={{ width: '100%', height: '100%', background: BRAND.paper, position: 'relative', padding: '70px 26px 26px' }}>
+      <div
+        style={{
+          display: 'inline-block',
+          transform: 'rotate(-2deg)',
+          background: BRAND.ink,
+          color: BRAND.lime,
+          padding: '6px 16px',
+          borderRadius: 6,
+          fontSize: 13,
+          marginBottom: 16,
+          ...display,
+        }}
+      >
+        MEMBROS
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <div style={{ flex: 1, height: 40, borderRadius: 10, border: `2px solid ${BRAND.ink}`, background: '#fff' }} />
+        <div
+          style={{
+            width: 70,
+            height: 40,
+            borderRadius: 10,
+            background: BRAND.violet,
+            border: `2px solid ${BRAND.ink}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            fontSize: 12,
+            ...display,
+          }}
+        >
+          + NOVO
+        </div>
+      </div>
+      <div
+        style={{
+          fontSize: 13,
+          ...display,
+          color: BRAND.violet,
+          textDecoration: 'underline',
+          marginBottom: 16,
+          opacity: importGlow,
+        }}
+      >
+        IMPORTAR PLANILHA DE MEMBROS
+      </div>
+      {names.map((name) => (
+        <div
+          key={name}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: '#fff',
+            border: `2px solid ${BRAND.ink}`,
+            borderRadius: 12,
+            padding: '12px 16px',
+            marginBottom: 10,
+          }}
+        >
+          <span style={{ ...sans, fontWeight: 700, fontSize: 16 }}>{name}</span>
+          <span style={{ fontSize: 11, ...display, color: BRAND.muted }}>EDITAR</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export const ScreenScanner: React.FC = () => {
   const frame = useCurrentFrame()
   const pulse = interpolate(frame % 40, [0, 20, 40], [0.3, 1, 0.3])

@@ -42,6 +42,7 @@ export default function DirectorEventos() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
   const [importingAttendance, setImportingAttendance] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
 
   async function reloadEvents() {
     const { data, error } = await supabase
@@ -118,8 +119,23 @@ export default function DirectorEventos() {
           >
             Falar com a TimeLabs
           </a>
+          <button
+            onClick={() => setShowTutorial((v) => !v)}
+            className="text-[11px] font-bold text-bloco-accent-text"
+          >
+            {showTutorial ? 'Fechar vídeo' : 'Como usar (vídeo)'}
+          </button>
         </div>
       </header>
+
+      {showTutorial && (
+        <video
+          src="/videos/tutorial-diretoria.mp4"
+          controls
+          playsInline
+          className="w-full max-w-[280px] mx-auto mb-4 rounded-lg border-2 border-bloco-ink shadow-hard-sm block"
+        />
+      )}
 
       <LinkButton to={blocoPath('/director/novo')} variant="primary" className="w-full py-3 mb-3">
         + NOVO ENSAIO
