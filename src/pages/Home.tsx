@@ -46,8 +46,8 @@ export default function Home() {
             pro seu bloco
           </h1>
           <p className="text-white/85 text-[15px] mt-5 max-w-md mx-auto leading-relaxed">
-            QR code, localização e cadastro de membros — o mesmo sistema que o Abalô-Caxi e o Lavô
-            Tá Novo já usam nos ensaios, com as cores do seu bloco.
+            QR code, localização e cadastro de membros — o mesmo sistema que outros blocos já usam
+            nos ensaios, com as cores do seu bloco.
           </p>
           <Link
             to="/cadastrar"
