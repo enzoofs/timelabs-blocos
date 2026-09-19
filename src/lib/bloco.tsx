@@ -62,12 +62,19 @@ export function BlocoProvider({ slug, children }: { slug: string; children: Reac
   useEffect(() => {
     const root = document.documentElement
     if (state.status === 'ready') {
+      const accent = state.bloco.theme.accent || DEFAULT_ACCENT
       root.style.setProperty('--bloco-primary', state.bloco.theme.primary || DEFAULT_PRIMARY)
-      root.style.setProperty('--bloco-accent', state.bloco.theme.accent || DEFAULT_ACCENT)
+      root.style.setProperty('--bloco-accent', accent)
+      // o accent é escolhido livremente pelo diretor — pode ser um
+      // amarelo/verde claro que fica ilegível como texto direto no
+      // papel. Escurece pra usar como cor de texto (--bloco-accent
+      // continua puro pra fundos/badges em cima do ink escuro).
+      root.style.setProperty('--bloco-accent-text', `color-mix(in srgb, ${accent} 50%, black)`)
     }
     return () => {
       root.style.removeProperty('--bloco-primary')
       root.style.removeProperty('--bloco-accent')
+      root.style.removeProperty('--bloco-accent-text')
     }
   }, [state])
 

@@ -320,7 +320,7 @@ export default function EventoDetalhe() {
                       <p className="text-xs text-bloco-muted">{p.member.instrument}</p>
                     )}
                     {p.source === 'manual' && (
-                      <p className="text-xs text-bloco-accent font-semibold">marcado manualmente</p>
+                      <p className="text-xs text-bloco-accent-text font-semibold">marcado manualmente</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-2">

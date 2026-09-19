@@ -103,7 +103,7 @@ export default function DirectorEventos() {
           <button onClick={signOut} className="text-xs font-bold text-bloco-muted">
             SAIR
           </button>
-          <Link to={blocoPath('/trocar-senha')} className="text-[11px] font-bold text-bloco-accent">
+          <Link to={blocoPath('/trocar-senha')} className="text-[11px] font-bold text-bloco-accent-text">
             Trocar senha
           </Link>
         </div>
@@ -125,7 +125,7 @@ export default function DirectorEventos() {
       <div className="flex justify-between items-center mb-3">
         <h2 className="font-display text-xs tracking-wide text-bloco-ink">ENSAIOS</h2>
         {events.length > 0 && (
-          <button onClick={toggleAll} className="text-xs font-bold text-bloco-accent">
+          <button onClick={toggleAll} className="text-xs font-bold text-bloco-accent-text">
             {selected.size === events.length ? 'LIMPAR' : 'SELECIONAR TODOS'}
           </button>
         )}

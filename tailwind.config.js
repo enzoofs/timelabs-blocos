@@ -28,6 +28,11 @@ export default {
         bloco: {
           primary: 'var(--bloco-primary)',
           accent: 'var(--bloco-accent)',
+          // versão escurecida do accent, só pra texto em cima de fundo
+          // claro — o accent puro é escolhido livremente pelo diretor
+          // (pode ser amarelo, verde-claro etc) e fica ilegível como
+          // cor de texto direto no papel/branco.
+          'accent-text': 'var(--bloco-accent-text)',
           ink: '#161616',
           paper: '#faf6ee',
           muted: '#8a8175',

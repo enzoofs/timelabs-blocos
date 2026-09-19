@@ -98,7 +98,7 @@ export default function MemberHome() {
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </button>
-            <Link to={blocoPath('/trocar-senha')} className="text-[11px] font-bold text-bloco-accent">
+            <Link to={blocoPath('/trocar-senha')} className="text-[11px] font-bold text-bloco-accent-text">
               Trocar senha
             </Link>
           </div>
@@ -168,7 +168,7 @@ export default function MemberHome() {
 
         <Link
           to={blocoPath('/member/historico')}
-          className="flex items-center justify-center gap-1.5 mt-6 font-display text-xs tracking-wide text-bloco-accent"
+          className="flex items-center justify-center gap-1.5 mt-6 font-display text-xs tracking-wide text-bloco-accent-text"
         >
           VER MEU HISTÓRICO
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#118ab2" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">

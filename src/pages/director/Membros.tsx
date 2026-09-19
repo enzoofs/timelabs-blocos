@@ -102,7 +102,7 @@ export default function Membros() {
             setEditing(null)
             setError(null)
           }}
-          className="text-xs font-bold text-bloco-accent"
+          className="text-xs font-bold text-bloco-accent-text"
         >
           {importing ? 'CANCELAR IMPORTAÇÃO' : 'IMPORTAR PLANILHA DE MEMBROS'}
         </button>
@@ -114,7 +114,7 @@ export default function Membros() {
             setEditing(null)
             setError(null)
           }}
-          className="text-xs font-bold text-bloco-accent"
+          className="text-xs font-bold text-bloco-accent-text"
         >
           {managingInstruments ? 'FECHAR INSTRUMENTOS' : 'GERENCIAR INSTRUMENTOS'}
         </button>
