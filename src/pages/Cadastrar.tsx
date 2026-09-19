@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { slugify } from '../lib/slug'
 import { createCheckoutSession, type CheckoutPlan } from '../lib/stripe'
 import { MONTHLY_PRICE, formatBRL, formatDatePtBR, lumpSumPrice, monthsUntil, nextCarnaval } from '../lib/pricing'
-import { Button, Input, Label } from '../components/ui'
+import { Button, Footer, Input, Label } from '../components/ui'
 
 const DEFAULT_PRIMARY = '#7c3aed'
 const DEFAULT_ACCENT = '#c6f135'
@@ -16,6 +16,7 @@ export default function Cadastrar() {
   const [city, setCity] = useState('')
   const [contactName, setContactName] = useState('')
   const [email, setEmail] = useState('')
+  const [whatsapp, setWhatsapp] = useState('')
   const [primary, setPrimary] = useState(DEFAULT_PRIMARY)
   const [accent, setAccent] = useState(DEFAULT_ACCENT)
   const [plan, setPlan] = useState<CheckoutPlan>('monthly')
@@ -34,8 +35,12 @@ export default function Cadastrar() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    if (!name.trim() || !slug.trim() || !email.trim()) {
-      setError('Preenche nome, identificador e e-mail.')
+    if (!name.trim() || !slug.trim() || !email.trim() || !whatsapp.trim()) {
+      setError('Preencha nome, identificador, e-mail e WhatsApp.')
+      return
+    }
+    if (whatsapp.replace(/\D/g, '').length < 6) {
+      setError('WhatsApp precisa ter pelo menos 6 dígitos.')
       return
     }
     setBusy(true)
@@ -54,13 +59,14 @@ export default function Cadastrar() {
       city: city.trim() || null,
       contact_name: contactName.trim() || null,
       contact_email: email.trim().toLowerCase(),
+      contact_whatsapp: whatsapp.trim(),
       theme: { primary, accent },
     })
 
     if (insertErr) {
       setBusy(false)
       if (insertErr.message.includes('duplicate') || insertErr.message.includes('unique')) {
-        setError('Já existe um bloco cadastrado com esse identificador. Muda o campo "endereço".')
+        setError('Já existe um bloco cadastrado com esse identificador. Mude o campo "endereço".')
       } else {
         setError('Não deu pra salvar o cadastro: ' + insertErr.message)
       }
@@ -91,7 +97,7 @@ export default function Cadastrar() {
         </Link>
         <h1 className="font-display text-2xl text-tl-ink mt-3">Cadastre seu bloco</h1>
         <p className="text-sm text-tl-muted mt-2 leading-relaxed">
-          Preenche os dados do bloco, escolhe as cores e o plano — no fim você é levado pro
+          Preencha os dados do bloco, escolha as cores e o plano — no fim você é levado pro
           pagamento seguro do Stripe. Assim que confirmar, o sistema do seu bloco fica pronto.
         </p>
 
@@ -145,6 +151,21 @@ export default function Cadastrar() {
             />
           </div>
 
+          <div>
+            <Label>SEU WHATSAPP</Label>
+            <Input
+              type="tel"
+              placeholder="11999990000"
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value)}
+              required
+            />
+            <p className="text-[11px] text-tl-muted mt-1.5 leading-relaxed">
+              Assim que o pagamento confirmar, seu login de diretor é criado com esse e-mail e os 6
+              últimos dígitos do WhatsApp como senha.
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>COR PRINCIPAL</Label>
@@ -185,6 +206,8 @@ export default function Cadastrar() {
             Pagamento processado pelo Stripe. Nenhum dado de cartão passa pelo nosso servidor.
           </p>
         </form>
+
+        <Footer />
       </div>
     </div>
   )

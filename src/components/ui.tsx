@@ -47,3 +47,18 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
     <div className={`bg-white border-2 border-tl-ink rounded-[10px] ${className}`}>{children}</div>
   )
 }
+
+export function Footer({ className = '' }: { className?: string }) {
+  return (
+    <footer className={`text-center py-8 ${className}`}>
+      <a
+        href="https://timelabs.com.br"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-[11px] font-bold text-tl-muted hover:text-tl-ink"
+      >
+        UMA INICIATIVA DA TIMELABS
+      </a>
+    </footer>
+  )
+}

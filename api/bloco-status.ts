@@ -21,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const admin = supabaseAdmin()
     const { data, error } = await admin
       .from('blocos')
-      .select('name, status')
+      .select('name, slug, status')
       .eq('slug', blocoSlug)
       .maybeSingle()
 
@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    res.status(200).json({ name: data.name, status: data.status })
+    res.status(200).json({ name: data.name, slug: data.slug, status: data.status })
   } catch (err) {
     console.error('bloco-status error', err)
     res.status(500).json({ error: 'Erro ao consultar status.' })

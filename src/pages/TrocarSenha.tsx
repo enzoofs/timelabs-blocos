@@ -1,0 +1,95 @@
+import { useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import { Button, Input, PageHeader } from '../components/product/ui'
+import { friendlyAuthError } from '../lib/errors'
+import { useBlocoPath } from '../lib/bloco'
+
+export default function TrocarSenha() {
+  const navigate = useNavigate()
+  const blocoPath = useBlocoPath()
+  const [senha, setSenha] = useState('')
+  const [confirma, setConfirma] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (senha.length < 6) {
+      setError('A senha precisa ter pelo menos 6 caracteres.')
+      return
+    }
+    if (senha !== confirma) {
+      setError('As senhas não são iguais.')
+      return
+    }
+    setBusy(true)
+    const { error: err } = await supabase.auth.updateUser({ password: senha })
+    if (!err) {
+      // marca que a senha não é mais a automática, pra nenhum reset futuro sobrescrever
+      await supabase.rpc('mark_password_changed')
+    }
+    setBusy(false)
+    if (err) {
+      setError(friendlyAuthError(err.message))
+      return
+    }
+    setDone(true)
+  }
+
+  return (
+    <div className="min-h-full bg-bloco-paper p-6 max-w-md mx-auto">
+      <PageHeader backTo={blocoPath('/')} title="Trocar senha" />
+
+      {done ? (
+        <div className="bg-white border-2 border-bloco-ink rounded-[10px] p-6 text-center">
+          <p className="font-display text-sm text-bloco-ink">SENHA ATUALIZADA ✓</p>
+          <p className="text-sm text-bloco-muted mt-2">
+            Da próxima vez que entrar, use a senha nova.
+          </p>
+          <Button onClick={() => navigate(blocoPath('/'))} className="mt-5">
+            VOLTAR
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <p className="text-sm text-bloco-muted">
+            Você já está logado. Escolha uma senha nova (mínimo 6 caracteres).
+          </p>
+          <div>
+            <label className="block font-display text-[11px] tracking-wide text-bloco-ink mb-1.5">
+              NOVA SENHA
+            </label>
+            <Input
+              type="password"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+              minLength={6}
+              autoComplete="new-password"
+            />
+          </div>
+          <div>
+            <label className="block font-display text-[11px] tracking-wide text-bloco-ink mb-1.5">
+              CONFIRMAR SENHA
+            </label>
+            <Input
+              type="password"
+              value={confirma}
+              onChange={(e) => setConfirma(e.target.value)}
+              required
+              minLength={6}
+              autoComplete="new-password"
+            />
+          </div>
+          {error && <p className="text-sm font-semibold text-bloco-red">{error}</p>}
+          <Button type="submit" disabled={busy} className="w-full py-3">
+            {busy ? 'SALVANDO…' : 'SALVAR SENHA NOVA'}
+          </Button>
+        </form>
+      )}
+    </div>
+  )
+}

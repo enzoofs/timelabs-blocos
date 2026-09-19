@@ -13,13 +13,20 @@
   "dependencies": {
     "@stripe/stripe-js": "^4.10.0",
     "@supabase/supabase-js": "^2.106.2",
+    "html5-qrcode": "^2.3.8",
+    "leaflet": "^1.9.4",
+    "qrcode": "^1.5.4",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-router-dom": "^7.15.1"
+    "react-leaflet": "^5.0.0",
+    "react-router-dom": "^7.15.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^24.12.3",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vercel/node": "^3.2.0",

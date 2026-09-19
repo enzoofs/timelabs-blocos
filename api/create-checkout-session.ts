@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { stripeAdmin } from '../server/stripeAdmin.js'
+import { supabaseAdmin } from '../server/supabaseAdmin.js'
 import { MONTHLY_PRICE, lumpSumPrice, monthsUntil, nextCarnaval } from '../src/lib/pricing.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -18,6 +19,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     (plan !== 'monthly' && plan !== 'lump_sum')
   ) {
     res.status(400).json({ error: 'Dados incompletos.' })
+    return
+  }
+
+  // Confere que existe mesmo um cadastro pendente com esse id/slug antes
+  // de gerar sessão de pagamento — sem isso, dava pra chamar essa rota
+  // direto com dados inventados e criar sessões do Stripe pra blocos
+  // que não existem.
+  const admin = supabaseAdmin()
+  const { data: bloco, error: blocoError } = await admin
+    .from('blocos')
+    .select('id')
+    .eq('id', blocoId)
+    .eq('slug', blocoSlug)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (blocoError || !bloco) {
+    res.status(404).json({ error: 'Cadastro do bloco não encontrado. Preenche o formulário de novo.' })
     return
   }
 

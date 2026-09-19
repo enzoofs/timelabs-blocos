@@ -2,7 +2,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import type Stripe from 'stripe'
 import { stripeAdmin } from '../server/stripeAdmin.js'
 import { supabaseAdmin } from '../server/supabaseAdmin.js'
+import { sendEmail, directorWelcomeEmail } from '../server/email.js'
 import { monthsUntil, nextCarnaval } from '../src/lib/pricing.js'
+
+const APP_URL = process.env.PUBLIC_APP_URL || 'https://timelabs-blocos.vercel.app'
 
 // Precisa do corpo cru pra verificar a assinatura do Stripe — desliga
 // o parser automático do Vercel.
@@ -58,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? null // assinatura: fica ativo enquanto a cobrança recorrente estiver em dia
           : new Date(Date.now() + months * 30 * 86_400_000).toISOString()
 
-      const { error } = await admin
+      const { data: bloco, error } = await admin
         .from('blocos')
         .update({
           status: 'active',
@@ -70,8 +73,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           paid_until: paidUntil,
         })
         .eq('slug', blocoSlug)
+        .select('id, name, contact_name, contact_email, contact_whatsapp')
+        .single()
 
-      if (error) console.error('Falha ao ativar bloco', blocoSlug, error)
+      if (error) {
+        console.error('Falha ao ativar bloco', blocoSlug, error)
+      } else if (bloco.contact_email && bloco.contact_whatsapp) {
+        // Cria o primeiro diretor automaticamente — sem isso, ninguém
+        // teria como entrar no sistema depois de pagar. O trigger
+        // member_auto_auth cria o login (e-mail + 6 últimos dígitos
+        // do WhatsApp como senha) na hora do insert.
+        const email = bloco.contact_email.toLowerCase()
+        const { data: existingDirector } = await admin
+          .from('members')
+          .select('id')
+          .eq('bloco_id', bloco.id)
+          .eq('email', email)
+          .maybeSingle()
+
+        if (!existingDirector) {
+          const { error: memberError } = await admin.from('members').insert({
+            bloco_id: bloco.id,
+            email,
+            full_name: bloco.contact_name || 'Diretoria',
+            whatsapp: bloco.contact_whatsapp,
+            role: 'director',
+          })
+          if (memberError) {
+            console.error('Falha ao criar diretor', blocoSlug, memberError)
+          } else {
+            const digits = bloco.contact_whatsapp.replace(/\D/g, '')
+            const { subject, html } = directorWelcomeEmail({
+              blocoName: bloco.name,
+              loginUrl: `${APP_URL}/${blocoSlug}/login`,
+              email,
+              whatsappLast6: digits.slice(-6),
+            })
+            await sendEmail({ to: email, subject, html })
+          }
+        }
+      }
     }
   }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { Button } from '../components/ui'
+import { Button, Footer } from '../components/ui'
 
 type BlocoPublic = {
   slug: string
@@ -76,13 +76,15 @@ export default function Home() {
         ) : (
           <ul className="grid grid-cols-2 gap-3">
             {blocos.map((b) => (
-              <li
-                key={b.slug}
-                className="bg-white border-2 border-tl-ink rounded-[10px] p-4"
-                style={{ boxShadow: `4px 4px 0 ${b.theme?.primary ?? '#7c3aed'}` }}
-              >
-                <p className="font-bold text-tl-ink text-sm truncate">{b.name}</p>
-                {b.city && <p className="text-xs text-tl-muted mt-0.5">{b.city}</p>}
+              <li key={b.slug}>
+                <Link
+                  to={`/${b.slug}/login`}
+                  className="block bg-white border-2 border-tl-ink rounded-[10px] p-4"
+                  style={{ boxShadow: `4px 4px 0 ${b.theme?.primary ?? '#7c3aed'}` }}
+                >
+                  <p className="font-bold text-tl-ink text-sm truncate">{b.name}</p>
+                  {b.city && <p className="text-xs text-tl-muted mt-0.5">{b.city}</p>}
+                </Link>
               </li>
             ))}
           </ul>
@@ -108,6 +110,8 @@ export default function Home() {
             QUERO PRO MEU BLOCO
           </Button>
         </div>
+
+        <Footer />
       </div>
     </div>
   )
