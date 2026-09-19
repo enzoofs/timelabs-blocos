@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
-import { useBloco, useRefreshBloco } from '../../lib/bloco'
+import { useBloco, useBlocoPath, useRefreshBloco } from '../../lib/bloco'
 import { MemberImport } from '../../components/MemberImport'
 import { Button, Input, PageHeader } from '../../components/product/ui'
 
@@ -16,6 +16,7 @@ type Member = {
 
 export default function Membros() {
   const bloco = useBloco()
+  const blocoPath = useBlocoPath()
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -67,7 +68,7 @@ export default function Membros() {
   return (
     <div className="min-h-full bg-bloco-paper p-6 max-w-md mx-auto">
       <PageHeader
-        backTo="/director"
+        backTo={blocoPath('/director')}
         title="Membros"
         subtitle={`${members.length} cadastrado${members.length === 1 ? '' : 's'}`}
       />

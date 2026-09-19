@@ -70,7 +70,7 @@ export default function Home() {
         ) : blocos.length === 0 ? (
           <div className="bg-white border-2 border-tl-ink rounded-[10px] p-6 text-center">
             <p className="text-sm text-tl-muted">
-              Seu bloco pode ser o primeiro aqui. <Link to="/cadastrar" className="text-tl-violet font-semibold underline">Cadastra agora</Link>.
+              Seu bloco pode ser o primeiro aqui. <Link to="/cadastrar" className="text-tl-violet font-semibold underline">Cadastre agora</Link>.
             </p>
           </div>
         ) : (
