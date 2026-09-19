@@ -1,8 +1,18 @@
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
+import { useBlocoPath } from '../lib/bloco'
 import { Button } from '../components/product/ui'
 
 export default function NotWhitelisted() {
   const { signOut, session } = useAuth()
+  const navigate = useNavigate()
+  const blocoPath = useBlocoPath()
+
+  async function handleSignOut() {
+    await signOut()
+    navigate(blocoPath('/login'), { replace: true })
+  }
+
   return (
     <div className="min-h-full flex items-center justify-center px-6 py-12 bg-bloco-paper">
       <div className="max-w-sm text-center">
@@ -16,7 +26,7 @@ export default function NotWhitelisted() {
           Fale com a direção do bloco pra pedir o cadastro, ou verifique se o e-mail
           que você usou é o mesmo que entregou no formulário de inscrição.
         </p>
-        <Button onClick={signOut}>SAIR</Button>
+        <Button onClick={handleSignOut}>SAIR</Button>
       </div>
     </div>
   )
