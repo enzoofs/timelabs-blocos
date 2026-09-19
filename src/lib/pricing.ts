@@ -2,7 +2,7 @@
 // de ajustar depois (valor da mensalidade, desconto do plano à vista).
 
 export const MONTHLY_PRICE = 79.9 // R$ por mês, por bloco
-export const LUMP_SUM_DISCOUNT = 0.15 // 15% de desconto pagando até o Carnaval de uma vez
+export const LUMP_SUM_DISCOUNT = 0.1 // 10% de desconto pagando até o Carnaval de uma vez
 
 // Data da Páscoa (algoritmo de Meeus/Jones/Butcher) — Carnaval (terça-feira)
 // é sempre 47 dias antes da Páscoa.
