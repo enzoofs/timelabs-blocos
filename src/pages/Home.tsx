@@ -109,6 +109,14 @@ export default function Home() {
           <Button onClick={() => (window.location.href = '/cadastrar')}>
             QUERO PRO MEU BLOCO
           </Button>
+          <a
+            href={`https://wa.me/5531995970472?text=${encodeURIComponent('Oi! Vi o TimeLabs e tenho uma dúvida antes de cadastrar meu bloco.')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block mt-4 text-sm font-semibold text-tl-violet underline"
+          >
+            Tirar dúvida antes no WhatsApp
+          </a>
         </div>
 
         <Footer />
