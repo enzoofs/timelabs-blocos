@@ -35,8 +35,8 @@ export default function Cadastrar() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    if (!name.trim() || !slug.trim() || !email.trim() || !whatsapp.trim()) {
-      setError('Preencha nome, identificador, e-mail e WhatsApp.')
+    if (!name.trim() || !email.trim() || !whatsapp.trim()) {
+      setError('Preencha nome, e-mail e WhatsApp.')
       return
     }
     if (whatsapp.replace(/\D/g, '').length < 6) {
@@ -49,8 +49,11 @@ export default function Cadastrar() {
     // acabou de cadastrar (só o webhook do Stripe, com a service role, lê
     // dados sensíveis), então não dá pra usar .select() depois do insert.
     const blocoId = crypto.randomUUID()
-    const trimmedSlug = slug.trim()
     const trimmedName = name.trim()
+    // Endereço é opcional — se a pessoa não preencher (ou apagar), gera um
+    // a partir do nome do bloco; se nem isso der um resultado válido
+    // (nome só com caracteres especiais), usa um identificador aleatório.
+    const trimmedSlug = slug.trim() || slugify(trimmedName) || `bloco-${blocoId.slice(0, 8)}`
 
     const { error: insertErr } = await supabase.from('blocos').insert({
       id: blocoId,
@@ -114,20 +117,23 @@ export default function Cadastrar() {
           </div>
 
           <div>
-            <Label>ENDEREÇO DO SISTEMA</Label>
+            <Label>ENDEREÇO DO SISTEMA (OPCIONAL)</Label>
             <div className="flex items-center gap-1 text-sm">
-              <span className="text-tl-muted whitespace-nowrap">timelabs.app/</span>
+              <span className="text-tl-muted whitespace-nowrap">seubloco.com/</span>
               <Input
                 type="text"
+                placeholder="gerado a partir do nome"
                 value={slug}
                 onChange={(e) => {
                   setSlugTouched(true)
                   setSlug(slugify(e.target.value))
                 }}
-                required
                 className="py-2"
               />
             </div>
+            <p className="text-xs text-tl-muted mt-1.5">
+              Se deixar em branco, geramos um endereço a partir do nome do bloco.
+            </p>
           </div>
 
           <div>
