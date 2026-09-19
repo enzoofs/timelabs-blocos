@@ -56,7 +56,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? {
               price_data: {
                 currency: 'brl',
-                unit_amount: MONTHLY_PRICE * 100,
+                // Math.round evita sobra de ponto flutuante (ex: 79.9 * 100
+                // pode virar 7990.000000000001) indo pro Stripe como centavos.
+                unit_amount: Math.round(MONTHLY_PRICE * 100),
                 recurring: { interval: 'month' },
                 product_data: { name: `TimeLabs — ${blocoName} (mensal)` },
               },

@@ -1,7 +1,7 @@
 // Preço e cálculo de "quanto falta pro Carnaval" — tudo aqui é fácil
 // de ajustar depois (valor da mensalidade, desconto do plano à vista).
 
-export const MONTHLY_PRICE = 39 // R$ por mês, por bloco
+export const MONTHLY_PRICE = 79.9 // R$ por mês, por bloco
 export const LUMP_SUM_DISCOUNT = 0.15 // 15% de desconto pagando até o Carnaval de uma vez
 
 // Data da Páscoa (algoritmo de Meeus/Jones/Butcher) — Carnaval (terça-feira)
@@ -58,7 +58,13 @@ export function lumpSumPrice(
 }
 
 export function formatBRL(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
+  const hasCents = Math.round(value * 100) % 100 !== 0
+  return value.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: hasCents ? 2 : 0,
+    maximumFractionDigits: 2,
+  })
 }
 
 export function formatDatePtBR(d: Date): string {
