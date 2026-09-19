@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useBloco, useBlocoPath } from '../../lib/bloco'
+import { AttendanceImport } from '../../components/AttendanceImport'
 import { Button, Chip, LinkButton, type ChipTone } from '../../components/product/ui'
 
 type Event = {
@@ -40,18 +41,21 @@ export default function DirectorEventos() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
+  const [importingAttendance, setImportingAttendance] = useState(false)
 
-  useEffect(() => {
-    supabase
+  async function reloadEvents() {
+    const { data, error } = await supabase
       .from('events')
       .select('id, name, starts_at, ends_at, radius_meters')
       .eq('bloco_id', bloco.id)
       .order('starts_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) console.error(error)
-        setEvents(data ?? [])
-        setLoading(false)
-      })
+    if (error) console.error(error)
+    setEvents(data ?? [])
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    void reloadEvents()
   }, [])
 
   function toggle(id: string) {
@@ -121,7 +125,7 @@ export default function DirectorEventos() {
         + NOVO ENSAIO
       </LinkButton>
 
-      <div className="grid grid-cols-2 gap-2 mb-6">
+      <div className="grid grid-cols-2 gap-2 mb-3">
         <LinkButton to={blocoPath('/director/membros')} variant="secondary" className="py-2.5 text-[11px]">
           MEMBROS
         </LinkButton>
@@ -129,6 +133,22 @@ export default function DirectorEventos() {
           RELATÓRIO
         </LinkButton>
       </div>
+
+      <button
+        onClick={() => setImportingAttendance((v) => !v)}
+        className="text-xs font-bold text-bloco-accent-text mb-4"
+      >
+        {importingAttendance ? 'CANCELAR IMPORTAÇÃO' : 'IMPORTAR PRESENÇAS DE ENSAIOS ANTIGOS'}
+      </button>
+
+      {importingAttendance && (
+        <AttendanceImport
+          onCancel={() => setImportingAttendance(false)}
+          onImportComplete={async () => {
+            await reloadEvents()
+          }}
+        />
+      )}
 
       <div className="flex justify-between items-center mb-3">
         <h2 className="font-display text-xs tracking-wide text-bloco-ink">ENSAIOS</h2>

@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useBloco } from '../lib/bloco'
-import { downloadCsv, toCsv } from '../lib/csv'
+import { downloadCsv, parseCsvLine, toCsv } from '../lib/csv'
 import { Button } from './product/ui'
 
 type ParsedRow = {
@@ -16,35 +16,6 @@ type ParsedRow = {
 type Result = {
   inserted: number
   skipped: number
-}
-
-function parseCsvLine(line: string): string[] {
-  const result: string[] = []
-  let current = ''
-  let inQuotes = false
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i]
-    if (inQuotes) {
-      if (ch === '"' && line[i + 1] === '"') {
-        current += '"'
-        i++
-      } else if (ch === '"') {
-        inQuotes = false
-      } else {
-        current += ch
-      }
-    } else {
-      if (ch === '"') inQuotes = true
-      else if (ch === ',' || ch === ';' || ch === '\t') {
-        result.push(current)
-        current = ''
-      } else {
-        current += ch
-      }
-    }
-  }
-  result.push(current)
-  return result.map((s) => s.trim())
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
