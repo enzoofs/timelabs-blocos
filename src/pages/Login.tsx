@@ -25,6 +25,7 @@ export default function Login() {
   const [mode, setMode] = useState<'signin' | 'changepw'>('signin')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [showVideo, setShowVideo] = useState(false)
 
   // entrar
   const [email, setEmail] = useState('')
@@ -118,7 +119,23 @@ export default function Login() {
             e os <strong className="text-bloco-accent">6 últimos dígitos do seu celular</strong> como
             senha.
           </p>
+          <button
+            type="button"
+            onClick={() => setShowVideo((v) => !v)}
+            className="w-full mt-2.5 text-[11px] font-display tracking-wider text-bloco-accent underline underline-offset-2"
+          >
+            {showVideo ? 'FECHAR VÍDEO' : '▶ VER COMO ENTRAR (VÍDEO)'}
+          </button>
         </div>
+
+        {showVideo && (
+          <video
+            src="/videos/tutorial-login.mp4"
+            controls
+            playsInline
+            className="w-full max-w-[240px] mt-3 rounded-lg border-2 border-bloco-ink shadow-hard-sm"
+          />
+        )}
 
         <div className="w-full max-w-sm mt-4 bg-bloco-paper border-[3px] border-bloco-ink rounded-lg shadow-hard-lg p-6">
           <div className="flex gap-2 mb-5">
