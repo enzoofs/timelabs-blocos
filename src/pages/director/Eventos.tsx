@@ -106,6 +106,14 @@ export default function DirectorEventos() {
           <Link to={blocoPath('/trocar-senha')} className="text-[11px] font-bold text-bloco-accent-text">
             Trocar senha
           </Link>
+          <a
+            href={`https://wa.me/5531995970472?text=${encodeURIComponent(`Oi! Sou diretoria do ${bloco.name} e preciso de ajuda com o sistema TimeLabs.`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] font-bold text-bloco-green"
+          >
+            Falar com a TimeLabs
+          </a>
         </div>
       </header>
 
