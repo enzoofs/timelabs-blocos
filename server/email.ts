@@ -39,6 +39,40 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;')
 }
 
+// Pra quem paga um bloco que já tem diretoria (ex: Abalô-Caxi pagando
+// pelo /cobrar): confirma o pagamento e lembra o link, sem falar em
+// senha — essas pessoas já têm login.
+export function paymentConfirmedEmail(params: {
+  blocoName: string
+  loginUrl: string
+  plan: 'monthly' | 'lump_sum'
+  paidUntil: string | null
+}): { subject: string; html: string } {
+  const blocoName = escapeHtml(params.blocoName)
+  const planText =
+    params.plan === 'monthly'
+      ? 'Plano mensal — renovado automaticamente todo mês.'
+      : `Plano até o Carnaval — pago à vista${
+          params.paidUntil
+            ? `, válido até ${new Date(params.paidUntil).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`
+            : ''
+        }.`
+  const subject = `Pagamento confirmado — ${params.blocoName} no TimeLabs`
+  const html = `
+    <div style="font-family: -apple-system, Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #161616;">
+      <h1 style="font-size: 20px;">Pagamento confirmado ✓</h1>
+      <p>Obrigado! O sistema de check-in do <strong>${blocoName}</strong> segue ativo.</p>
+      <p style="margin: 16px 0; padding: 12px; background: #f5f0e8; border-radius: 6px;">${planText}</p>
+      <p>A diretoria continua entrando pelo mesmo endereço, com o login de sempre:</p>
+      <p style="font-weight: bold;"><a href="${params.loginUrl}">${params.loginUrl}</a></p>
+      <p style="font-size: 13px; color: #8a8175; margin-top: 24px;">
+        Dúvidas? Só responder este e-mail.
+      </p>
+    </div>
+  `
+  return { subject, html }
+}
+
 export function directorWelcomeEmail(params: {
   blocoName: string
   loginUrl: string

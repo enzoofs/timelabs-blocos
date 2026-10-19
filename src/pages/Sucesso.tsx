@@ -92,9 +92,9 @@ export default function Sucesso() {
             </p>
             <div className="mt-5 bg-tl-paper border-2 border-tl-ink rounded-md p-3.5 text-left">
               <p className="text-xs text-tl-ink leading-relaxed">
-                Seu login de diretor já está pronto: entre com o <strong>e-mail</strong> que você
-                cadastrou e os <strong>6 últimos dígitos do seu WhatsApp</strong> como senha. Dá pra
-                trocar a senha depois de entrar.
+                Entre com o seu <strong>e-mail de diretor</strong>. Se é o seu primeiro acesso, a
+                senha são os <strong>6 últimos dígitos do seu WhatsApp</strong>; se você já usava o
+                sistema, é a mesma senha de sempre.
               </p>
             </div>
             {blocoSlug ? (
