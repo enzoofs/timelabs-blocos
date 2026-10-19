@@ -94,9 +94,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       cancel_url: `${origin}/inscricao/cancelado`,
     }, {
       // Clique duplo ou retry de rede pro mesmo bloco + plano reaproveita a
-      // mesma sessão em vez de criar uma cobrança nova. Se a pessoa mudar
-      // de plano, a chave muda e uma sessão nova é criada normalmente.
-      idempotencyKey: `checkout:${blocoId}:${plan}`,
+      // mesma sessão em vez de criar uma cobrança nova. Tudo que muda os
+      // parâmetros da sessão (plano, e-mail, meses) entra na chave — o
+      // Stripe recusa reusar uma chave com parâmetros diferentes, então
+      // trocar o e-mail e tentar de novo dava erro em vez de nova sessão.
+      idempotencyKey: `checkout:${blocoId}:${plan}:${email.toLowerCase()}:${months}`,
     })
 
     if (!session.url) throw new Error('Stripe não retornou URL de checkout.')

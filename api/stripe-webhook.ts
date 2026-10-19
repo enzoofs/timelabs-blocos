@@ -22,6 +22,20 @@ function readRawBody(req: VercelRequest): Promise<Buffer> {
   })
 }
 
+// Versões novas da API do Stripe (2025-03 "basil" em diante — o
+// endpoint está em 2026-08-26.dahlia) tiraram invoice.subscription da
+// raiz; o id agora vem em invoice.parent.subscription_details. Lê os
+// dois formatos pra não depender da versão configurada no endpoint.
+function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const loose = invoice as unknown as {
+    subscription?: string | { id: string } | null
+    parent?: { subscription_details?: { subscription?: string | { id: string } | null } | null } | null
+  }
+  const sub = loose.parent?.subscription_details?.subscription ?? loose.subscription
+  if (!sub) return null
+  return typeof sub === 'string' ? sub : sub.id
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.status(405).end()
@@ -83,15 +97,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // teria como entrar no sistema depois de pagar. O trigger
         // member_auto_auth cria o login (e-mail + 6 últimos dígitos
         // do WhatsApp como senha) na hora do insert.
+        // Só se o bloco ainda não tem nenhum diretor: blocos migrados
+        // (Abalô-Caxi, Lavô Tá Novo) já têm diretoria e pagam pelo
+        // /cobrar — não pode nascer um diretor extra com o e-mail de
+        // contato nem sair e-mail de boas-vindas pra eles.
         const email = bloco.contact_email.toLowerCase()
-        const { data: existingDirector } = await admin
+        const { count: directorCount } = await admin
           .from('members')
-          .select('id')
+          .select('id', { count: 'exact', head: true })
           .eq('bloco_id', bloco.id)
-          .eq('email', email)
-          .maybeSingle()
+          .eq('role', 'director')
 
-        if (!existingDirector) {
+        if (!directorCount) {
           const { error: memberError } = await admin.from('members').insert({
             bloco_id: bloco.id,
             email,
@@ -125,10 +142,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (event.type === 'invoice.payment_failed') {
-    const invoice = event.data.object as Stripe.Invoice
-    const subscriptionId = invoice.subscription
+    const subscriptionId = invoiceSubscriptionId(event.data.object as Stripe.Invoice)
     if (typeof subscriptionId === 'string') {
       await admin.from('blocos').update({ status: 'past_due' }).eq('stripe_subscription_id', subscriptionId)
+    }
+  }
+
+  // Nova tentativa de cobrança deu certo: volta de 'past_due' pra
+  // 'active'. Não mexe em 'canceled' — assinatura encerrada não volta
+  // por fatura avulsa.
+  if (event.type === 'invoice.paid') {
+    const subscriptionId = invoiceSubscriptionId(event.data.object as Stripe.Invoice)
+    if (typeof subscriptionId === 'string') {
+      await admin
+        .from('blocos')
+        .update({ status: 'active' })
+        .eq('stripe_subscription_id', subscriptionId)
+        .eq('status', 'past_due')
     }
   }
 
