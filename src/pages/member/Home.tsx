@@ -4,10 +4,9 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useBloco, useBlocoPath } from '../../lib/bloco'
 import { useCountUp } from '../../lib/motion'
-import { isCheckinSoundEnabled, setCheckinSoundEnabled, unlockAudio } from '../../lib/sound'
+import { unlockAudio } from '../../lib/sound'
 import { Skeleton } from '../../components/Skeleton'
 import { LiveDot } from '../../components/product/ui'
-import { useToast } from '../../components/Toast'
 
 type Event = {
   id: string
@@ -39,17 +38,7 @@ export default function MemberHome() {
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false)
   const [totalPresencas, setTotalPresencas] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [soundOn, setSoundOn] = useState(isCheckinSoundEnabled)
-  const toast = useToast()
   const shownPresencas = useCountUp(totalPresencas, 700)
-
-  function toggleSound() {
-    const next = !soundOn
-    setSoundOn(next)
-    setCheckinSoundEnabled(next)
-    if (next) unlockAudio()
-    toast(next ? 'Som ao marcar presença ligado' : 'Som ao marcar presença desligado')
-  }
 
   useEffect(() => {
     if (!member) return
@@ -215,15 +204,6 @@ export default function MemberHome() {
         <p className="text-xs font-medium text-bloco-muted text-center mt-5 px-10 leading-relaxed">
           Você também pode escanear o QR direto pela câmera do celular.
         </p>
-
-        <button
-          onClick={toggleSound}
-          className="press mx-auto mt-4 flex items-center gap-2 px-3 py-1.5 rounded-full border-2 border-bloco-ink bg-white text-[11px] font-bold"
-          aria-pressed={soundOn}
-        >
-          <span aria-hidden>{soundOn ? '🔊' : '🔇'}</span>
-          Som ao marcar presença: {soundOn ? 'ligado' : 'desligado'}
-        </button>
       </div>
     </div>
   )

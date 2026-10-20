@@ -7,8 +7,6 @@
 // direto pelo link do QR na câmera do sistema, o contexto pode continuar
 // bloqueado — aí o som é simplesmente pulado.
 
-const PREF_KEY = 'seubloco:checkin-sound'
-
 let ctx: AudioContext | null = null
 
 function getContext(): AudioContext | null {
@@ -40,24 +38,7 @@ export function unlockAudio() {
   }
 }
 
-export function isCheckinSoundEnabled(): boolean {
-  try {
-    return localStorage.getItem(PREF_KEY) !== 'off'
-  } catch {
-    return true
-  }
-}
-
-export function setCheckinSoundEnabled(on: boolean) {
-  try {
-    localStorage.setItem(PREF_KEY, on ? 'on' : 'off')
-  } catch {
-    // modo privado etc — fica só nessa sessão
-  }
-}
-
 export function playCheckinSound() {
-  if (!isCheckinSoundEnabled()) return
   const c = getContext()
   if (!c || c.state !== 'running') return
 
