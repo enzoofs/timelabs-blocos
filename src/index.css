@@ -15,4 +15,64 @@ body {
   background-color: #f5f0e6;
   color: #161616;
   margin: 0;
+  /* sem o "puxa e estica" do navegador — parece mais app */
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* tira o atraso de toque duplo nos controles */
+a, button, input, select, label, [role='button'] {
+  touch-action: manipulation;
+}
+
+@layer components {
+  /* Toque "afunda" o elemento até a sombra dura — botão físico. */
+  .press {
+    transition:
+      transform 120ms cubic-bezier(.2,.8,.2,1),
+      box-shadow 120ms cubic-bezier(.2,.8,.2,1);
+  }
+  .press:active:not(:disabled) {
+    transform: translate(3px, 3px);
+    box-shadow: none;
+  }
+
+  /* Filhos entram em sequência; cada um define --i (0, 1, 2…). */
+  .stagger > * {
+    animation: rise .35s cubic-bezier(.2,.8,.2,1) both;
+    animation-delay: calc(var(--i, 0) * 45ms);
+  }
+}
+
+/* Confete (components/Confetti.tsx): estoura pra cima/pros lados até
+   (--bx, --by) desacelerando, depois cai acelerando até (--dx, --dy) —
+   arco de "gravidade" em duas etapas. Fica aqui e não no tailwind.config
+   porque o Tailwind só gera @keyframes ligados a uma classe animate-*. */
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(.6);
+    animation-timing-function: cubic-bezier(.15, .8, .35, 1);
+  }
+  30% {
+    opacity: 1;
+    transform: translate3d(var(--bx), var(--by), 0) rotate(calc(var(--rot) * .35)) scale(1);
+    animation-timing-function: cubic-bezier(.5, 0, .9, .6);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--dx), var(--dy), 0) rotate(var(--rot)) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
 }

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
+import { useCountUp } from '../../lib/motion'
 
 export function PageHeader({
   eyebrow,
@@ -45,15 +46,17 @@ export function PageHeader({
 export function Card({
   children,
   hard,
+  interactive,
   className = '',
 }: {
   children: ReactNode
   hard?: boolean
+  interactive?: boolean
   className?: string
 }) {
   return (
     <div
-      className={`bg-white border-2 border-bloco-ink rounded-[10px] ${hard ? 'shadow-hard-sm' : ''} ${className}`}
+      className={`bg-white border-2 border-bloco-ink rounded-[10px] ${hard ? 'shadow-hard-sm' : ''} ${interactive ? 'press' : ''} ${className}`}
     >
       {children}
     </div>
@@ -69,17 +72,31 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   ghost: 'bg-transparent text-bloco-ink border-transparent',
 }
 
+export function Spinner({ className = '' }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={`inline-block w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin ${className}`}
+    />
+  )
+}
+
 export function Button({
   variant = 'primary',
   className = '',
+  loading = false,
+  disabled,
   children,
   ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; loading?: boolean }) {
   return (
     <button
       {...rest}
-      className={`px-4 py-2.5 rounded-md border-2 font-display text-xs tracking-wide disabled:opacity-50 ${VARIANT_CLASSES[variant]} ${className}`}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      className={`press inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md border-2 font-display text-xs tracking-wide disabled:opacity-50 ${VARIANT_CLASSES[variant]} ${className}`}
     >
+      {loading && <Spinner />}
       {children}
     </button>
   )
@@ -99,7 +116,7 @@ export function LinkButton({
   return (
     <Link
       to={to}
-      className={`inline-flex items-center justify-center px-4 py-2.5 rounded-md border-2 font-display text-xs tracking-wide text-center ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`press inline-flex items-center justify-center px-4 py-2.5 rounded-md border-2 font-display text-xs tracking-wide text-center ${VARIANT_CLASSES[variant]} ${className}`}
     >
       {children}
     </Link>
@@ -111,7 +128,7 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...rest}
-      className={`w-full px-3 py-2.5 rounded-md border-2 border-bloco-ink bg-white text-sm focus:outline-none focus:ring-2 focus:ring-bloco-primary ${className}`}
+      className={`w-full px-3 py-2.5 rounded-md border-2 border-bloco-ink bg-white text-sm transition-shadow duration-150 focus:outline-none focus:ring-2 focus:ring-bloco-primary ${className}`}
     />
   )
 }
@@ -129,17 +146,39 @@ const CHIP_CLASSES: Record<ChipTone, string> = {
 export function Chip({ tone, children }: { tone: ChipTone; children: ReactNode }) {
   return (
     <span
-      className={`text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap border border-bloco-ink/10 ${CHIP_CLASSES[tone]}`}
+      className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap border border-bloco-ink/10 animate-pop-in ${CHIP_CLASSES[tone]}`}
     >
+      {tone === 'live' && <LiveDot />}
       {children}
     </span>
   )
 }
 
-export function StatTile({ label, value }: { label: string; value: string | number }) {
+/** Ponto "ao vivo" com anel expandindo. */
+export function LiveDot({ className = 'bg-bloco-ink' }: { className?: string }) {
+  return (
+    <span aria-hidden className="relative inline-flex w-2 h-2">
+      <span className={`absolute inset-0 rounded-full animate-pulse-ring ${className}`} />
+      <span className={`relative w-2 h-2 rounded-full ${className}`} />
+    </span>
+  )
+}
+
+export function StatTile({
+  label,
+  value,
+  suffix = '',
+}: {
+  label: string
+  value: number | null
+  suffix?: string
+}) {
+  const shown = useCountUp(value ?? 0)
   return (
     <div className="bg-white border-2 border-bloco-ink rounded-[10px] px-3 py-3 text-center">
-      <p className="font-display text-xl text-bloco-ink">{value}</p>
+      <p className="font-display text-xl text-bloco-ink tabular-nums">
+        {value === null ? '—' : `${shown}${suffix}`}
+      </p>
       <p className="text-[10px] text-bloco-muted uppercase tracking-wide font-bold mt-1">{label}</p>
     </div>
   )

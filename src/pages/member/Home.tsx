@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useBloco, useBlocoPath } from '../../lib/bloco'
+import { useCountUp } from '../../lib/motion'
+import { isCheckinSoundEnabled, setCheckinSoundEnabled, unlockAudio } from '../../lib/sound'
+import { Skeleton } from '../../components/Skeleton'
+import { LiveDot } from '../../components/product/ui'
+import { useToast } from '../../components/Toast'
 
 type Event = {
   id: string
@@ -34,6 +39,17 @@ export default function MemberHome() {
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false)
   const [totalPresencas, setTotalPresencas] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [soundOn, setSoundOn] = useState(isCheckinSoundEnabled)
+  const toast = useToast()
+  const shownPresencas = useCountUp(totalPresencas, 700)
+
+  function toggleSound() {
+    const next = !soundOn
+    setSoundOn(next)
+    setCheckinSoundEnabled(next)
+    if (next) unlockAudio()
+    toast(next ? 'Som ao marcar presença ligado' : 'Som ao marcar presença desligado')
+  }
 
   useEffect(() => {
     if (!member) return
@@ -105,15 +121,24 @@ export default function MemberHome() {
         </header>
 
         {loading ? (
-          <p className="text-bloco-muted text-sm">Carregando…</p>
+          <div className="rounded-[10px] bg-bloco-ink/90 p-5 space-y-3">
+            <Skeleton className="h-3 w-32" dark />
+            <Skeleton className="h-5 w-48" dark />
+            <Skeleton className="h-3 w-40" dark />
+            <Skeleton className="h-12 w-full mt-2" dark />
+          </div>
         ) : !event ? (
-          <div className="rounded-lg border-2 border-bloco-ink bg-white p-6 text-center">
+          <div className="rounded-lg border-2 border-bloco-ink bg-white p-6 text-center animate-pop-in">
             <p className="text-bloco-muted">Nenhum ensaio agendado.</p>
           </div>
         ) : (
-          <div className="bg-bloco-ink rounded-[10px] shadow-hard-bloco p-5">
+          <div className="bg-bloco-ink rounded-[10px] shadow-hard-bloco p-5 animate-rise">
             <div className="flex items-center gap-1.5 mb-3">
-              <span className="w-2.5 h-2.5 rounded-full bg-bloco-primary animate-pulse" />
+              {status === 'live' ? (
+                <LiveDot className="bg-bloco-primary" />
+              ) : (
+                <span className="w-2 h-2 rounded-full bg-bloco-primary" />
+              )}
               <span className="font-display text-[11px] tracking-wider text-orange-300">
                 {status === 'live' ? 'ACONTECENDO AGORA' : 'PRÓXIMO ENSAIO'}
               </span>
@@ -124,24 +149,28 @@ export default function MemberHome() {
             </p>
 
             {alreadyCheckedIn ? (
-              <div className="w-full py-3.5 rounded-md bg-bloco-green/90 text-center">
+              <div className="w-full py-3.5 rounded-md bg-bloco-green/90 text-center animate-stamp">
                 <span className="font-display text-sm text-bloco-ink">
                   PRESENÇA CONFIRMADA ✓
                 </span>
               </div>
             ) : status === 'live' ? (
-              <Link
-                to={blocoPath('/member/scanner')}
-                className="w-full py-3.5 rounded-md bg-bloco-accent shadow-hard-sm flex items-center justify-center gap-2"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#161616" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="7" height="7" rx="1" />
-                  <rect x="14" y="3" width="7" height="7" rx="1" />
-                  <rect x="3" y="14" width="7" height="7" rx="1" />
-                  <path d="M14 14h3v3h-3zM19 14h2v2h-2zM14 19h2v2h-2zM19 19h2v2h-2z" />
-                </svg>
-                <span className="font-display text-sm text-bloco-ink">MARCAR PRESENÇA</span>
-              </Link>
+              // respira no wrapper; o press fica no link (as duas usam transform)
+              <div className="animate-breathe">
+                <Link
+                  to={blocoPath('/member/scanner')}
+                  onClick={unlockAudio}
+                  className="press w-full py-3.5 rounded-md bg-bloco-accent shadow-hard-sm flex items-center justify-center gap-2"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#161616" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <path d="M14 14h3v3h-3zM19 14h2v2h-2zM14 19h2v2h-2zM19 19h2v2h-2z" />
+                  </svg>
+                  <span className="font-display text-sm text-bloco-ink">MARCAR PRESENÇA</span>
+                </Link>
+              </div>
             ) : (
               <p className="text-xs text-stone-400 text-center">
                 O botão aparece quando o ensaio começar.
@@ -150,16 +179,22 @@ export default function MemberHome() {
           </div>
         )}
 
-        <div className="bg-white border-2 border-bloco-ink rounded-[10px] p-5 mt-4 flex items-center gap-4">
-          <div className="font-display text-3xl text-bloco-ink leading-none">{totalPresencas}</div>
-          <div className="flex-1">
+        <div className="bg-white border-2 border-bloco-ink rounded-[10px] p-5 mt-4 flex items-center gap-4 animate-rise [animation-delay:80ms]">
+          <div className="font-display text-3xl text-bloco-ink leading-none tabular-nums">{shownPresencas}</div>
+          <div className="flex-1 min-w-0">
             <p className="text-[13.5px] font-extrabold mb-2">Presenças na bateria</p>
-            <div className="flex gap-1.5">
+            {/* varal de bandeirinhas: uma por presença, penduradas em sequência */}
+            <div className="flex flex-wrap gap-1.5">
               {Array.from({ length: totalPresencas }).map((_, i) => (
                 <span
                   key={i}
-                  className="w-[22px] h-[14px] rounded border-2 border-bloco-ink"
-                  style={{ backgroundColor: FLAG_COLORS[i % FLAG_COLORS.length] }}
+                  className="w-[22px] h-[14px] rounded border-2 border-bloco-ink origin-top animate-pop-in"
+                  style={
+                    {
+                      backgroundColor: FLAG_COLORS[i % FLAG_COLORS.length],
+                      animationDelay: `${200 + Math.min(i, 20) * 50}ms`,
+                    } as CSSProperties
+                  }
                 />
               ))}
             </div>
@@ -180,6 +215,15 @@ export default function MemberHome() {
         <p className="text-xs font-medium text-bloco-muted text-center mt-5 px-10 leading-relaxed">
           Você também pode escanear o QR direto pela câmera do celular.
         </p>
+
+        <button
+          onClick={toggleSound}
+          className="press mx-auto mt-4 flex items-center gap-2 px-3 py-1.5 rounded-full border-2 border-bloco-ink bg-white text-[11px] font-bold"
+          aria-pressed={soundOn}
+        >
+          <span aria-hidden>{soundOn ? '🔊' : '🔇'}</span>
+          Som ao marcar presença: {soundOn ? 'ligado' : 'desligado'}
+        </button>
       </div>
     </div>
   )

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { BlocoProvider, useBlocoState } from './lib/bloco'
 import { AuthProvider, useAuth } from './lib/auth'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { ToastProvider } from './components/Toast'
 import Login from './pages/Login'
 import NotWhitelisted from './pages/NotWhitelisted'
 import TrocarSenha from './pages/TrocarSenha'
@@ -155,7 +156,11 @@ function BlocoGate() {
     )
   }
 
-  return <BlocoRoutes />
+  return (
+    <ToastProvider>
+      <BlocoRoutes />
+    </ToastProvider>
+  )
 }
 
 export default function BlocoApp() {

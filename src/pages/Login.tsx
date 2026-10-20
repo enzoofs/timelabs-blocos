@@ -4,6 +4,8 @@ import { useAuth } from '../lib/auth'
 import { useBloco, useBlocoPath } from '../lib/bloco'
 import { supabase } from '../lib/supabase'
 import { friendlyAuthError } from '../lib/errors'
+import { haptic, useRetrigger } from '../lib/motion'
+import { Spinner } from '../components/product/ui'
 
 const FLAG_COLORS = ['bg-bloco-red', 'bg-bloco-accent', 'bg-bloco-green', 'bg-bloco-primary']
 
@@ -26,6 +28,13 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [showVideo, setShowVideo] = useState(false)
+  const [shakeKey, triggerShake] = useRetrigger()
+
+  function fail(message: string) {
+    setError(message)
+    triggerShake()
+    haptic(80)
+  }
 
   // entrar
   const [email, setEmail] = useState('')
@@ -51,18 +60,18 @@ export default function Login() {
     setBusy(true)
     const { error: err } = await signInWithEmail(email, password)
     setBusy(false)
-    if (err) setError(friendlyAuthError(err))
+    if (err) fail(friendlyAuthError(err))
   }
 
   async function handleChangePassword(e: FormEvent) {
     e.preventDefault()
     setError(null)
     if (cpNew.length < 6) {
-      setError('A senha nova precisa ter pelo menos 6 caracteres.')
+      fail('A senha nova precisa ter pelo menos 6 caracteres.')
       return
     }
     if (cpNew !== cpConfirm) {
-      setError('As senhas novas não são iguais.')
+      fail('As senhas novas não são iguais.')
       return
     }
     setBusy(true)
@@ -75,14 +84,14 @@ export default function Login() {
     if (signInErr) {
       setBusy(false)
       setSuppressRedirect(false)
-      setError(friendlyAuthError(signInErr.message))
+      fail(friendlyAuthError(signInErr.message))
       return
     }
 
     const { error: updateErr } = await supabase.auth.updateUser({ password: cpNew })
     setBusy(false)
     if (updateErr) {
-      setError(friendlyAuthError(updateErr.message))
+      fail(friendlyAuthError(updateErr.message))
       return
     }
     await supabase.rpc('mark_password_changed')
@@ -92,28 +101,36 @@ export default function Login() {
   return (
     <div className="min-h-full relative overflow-hidden bg-bloco-primary">
       {/* flat color blocks */}
-      <div className="absolute -top-8 -left-8 w-56 h-56 rounded-br-[220px] bg-bloco-ink/10" />
-      <div className="absolute -bottom-8 -right-8 w-52 h-64 rounded-tl-[200px] bg-bloco-accent" />
+      <div className="absolute -top-8 -left-8 w-56 h-56 rounded-br-[220px] bg-bloco-ink/10 origin-top-left animate-pop-in" />
+      <div className="absolute -bottom-8 -right-8 w-52 h-64 rounded-tl-[200px] bg-bloco-accent origin-bottom-right animate-pop-in [animation-delay:120ms]" />
 
       <div className="relative flex flex-col items-center px-6 pt-16 pb-10">
-        <div className="-rotate-3 bg-bloco-ink px-5 py-2 shadow-hard-sm">
-          <span className="font-display text-xs tracking-wider text-bloco-accent">
-            {bloco.city ? bloco.city.toUpperCase() : 'BLOCO DE CARNAVAL'}
-          </span>
+        {/* animação no wrapper: o keyframe usa transform e apagaria o -rotate-3 */}
+        <div className="animate-rise">
+          <div className="-rotate-3 bg-bloco-ink px-5 py-2 shadow-hard-sm">
+            <span className="font-display text-xs tracking-wider text-bloco-accent">
+              {bloco.city ? bloco.city.toUpperCase() : 'BLOCO DE CARNAVAL'}
+            </span>
+          </div>
         </div>
 
-        <h1 className="font-display text-4xl leading-[1.05] text-bloco-ink mt-6 text-center break-words max-w-xs">
+        <h1 className="font-display text-4xl leading-[1.05] text-bloco-ink mt-6 text-center break-words max-w-xs animate-pop-in [animation-delay:80ms]">
           {bloco.name.toUpperCase()}
         </h1>
 
         <div className="flex mt-5 rounded-md overflow-hidden shadow-hard-sm">
-          {FLAG_COLORS.map((c) => (
-            <span key={c} className={`w-7 h-3.5 ${c}`} />
+          {/* bandeirinhas balançam uma vez, em sequência */}
+          {FLAG_COLORS.map((c, i) => (
+            <span
+              key={c}
+              className={`w-7 h-3.5 origin-top animate-wiggle ${c}`}
+              style={{ animationDelay: `${300 + i * 90}ms` }}
+            />
           ))}
         </div>
 
         {/* aviso sobre a senha padrão, sempre visível */}
-        <div className="w-full max-w-sm mt-6 bg-bloco-ink border-2 border-bloco-ink rounded-md p-3.5">
+        <div className="w-full max-w-sm mt-6 bg-bloco-ink border-2 border-bloco-ink rounded-md p-3.5 animate-rise [animation-delay:150ms]">
           <p className="text-xs text-bloco-paper text-center leading-relaxed">
             Sua conta já existe! Faça login com seu <strong className="text-bloco-accent">e-mail</strong>{' '}
             e os <strong className="text-bloco-accent">6 últimos dígitos do seu celular</strong> como
@@ -133,16 +150,22 @@ export default function Login() {
             src="/videos/tutorial-login.mp4"
             controls
             playsInline
-            className="w-full max-w-[240px] mt-3 rounded-lg border-2 border-bloco-ink shadow-hard-sm"
+            className="w-full max-w-[240px] mt-3 rounded-lg border-2 border-bloco-ink shadow-hard-sm animate-pop-in"
           />
         )}
 
-        <div className="w-full max-w-sm mt-4 bg-bloco-paper border-[3px] border-bloco-ink rounded-lg shadow-hard-lg p-6">
+        {/* entra subindo; a cada erro, remonta (key) e treme */}
+        <div
+          key={shakeKey}
+          className={`w-full max-w-sm mt-4 bg-bloco-paper border-[3px] border-bloco-ink rounded-lg shadow-hard-lg p-6 ${
+            shakeKey > 0 ? 'animate-shake' : 'animate-rise [animation-delay:220ms]'
+          }`}
+        >
           <div className="flex gap-2 mb-5">
             <button
               type="button"
               onClick={() => switchMode('signin')}
-              className={`flex-1 py-2 rounded-md border-2 border-bloco-ink font-display text-[11px] tracking-wider ${
+              className={`press flex-1 py-2 rounded-md border-2 border-bloco-ink font-display text-[11px] tracking-wider transition-colors duration-200 ${
                 mode === 'signin' ? 'bg-bloco-ink text-bloco-accent' : 'bg-white text-bloco-ink'
               }`}
             >
@@ -151,7 +174,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => switchMode('changepw')}
-              className={`flex-1 py-2 rounded-md border-2 border-bloco-ink font-display text-[11px] tracking-wider ${
+              className={`press flex-1 py-2 rounded-md border-2 border-bloco-ink font-display text-[11px] tracking-wider transition-colors duration-200 ${
                 mode === 'changepw' ? 'bg-bloco-ink text-bloco-accent' : 'bg-white text-bloco-ink'
               }`}
             >
@@ -160,7 +183,7 @@ export default function Login() {
           </div>
 
           {mode === 'signin' ? (
-            <form onSubmit={handleSignin} className="space-y-4">
+            <form key="signin" onSubmit={handleSignin} className="space-y-4 animate-rise">
               <div>
                 <label className="block font-display text-[11px] tracking-wider text-bloco-ink mb-2">
                   E-MAIL
@@ -172,7 +195,7 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
-                  className="w-full px-3 py-3 rounded-md border-2 border-bloco-ink bg-white text-sm focus:outline-none focus:ring-2 focus:ring-bloco-primary"
+                  className="w-full px-3 py-3 rounded-md border-2 border-bloco-ink bg-white text-sm transition-shadow duration-150 focus:outline-none focus:ring-2 focus:ring-bloco-primary"
                 />
               </div>
               <div>
@@ -186,20 +209,21 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
-                  className="w-full px-3 py-3 rounded-md border-2 border-bloco-ink bg-white text-sm focus:outline-none focus:ring-2 focus:ring-bloco-primary"
+                  className="w-full px-3 py-3 rounded-md border-2 border-bloco-ink bg-white text-sm transition-shadow duration-150 focus:outline-none focus:ring-2 focus:ring-bloco-primary"
                 />
               </div>
-              {error && <p className="text-sm font-semibold text-bloco-red">{error}</p>}
+              {error && <p className="text-sm font-semibold text-bloco-red animate-pop-in">{error}</p>}
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full py-3.5 rounded-md border-[2.5px] border-bloco-ink bg-bloco-primary text-bloco-paper font-display text-sm tracking-wide shadow-hard disabled:opacity-50"
+                className="press w-full py-3.5 rounded-md border-[2.5px] border-bloco-ink bg-bloco-primary text-bloco-paper font-display text-sm tracking-wide shadow-hard disabled:opacity-50 inline-flex items-center justify-center gap-2"
               >
-                {busy ? '...' : 'ENTRAR'}
+                {busy && <Spinner />}
+                {busy ? 'ENTRANDO' : 'ENTRAR'}
               </button>
             </form>
           ) : (
-            <form onSubmit={handleChangePassword} className="space-y-4">
+            <form key="changepw" onSubmit={handleChangePassword} className="space-y-4 animate-rise">
               <p className="text-xs text-bloco-ink bg-white border-2 border-bloco-ink rounded-md p-3">
                 Informe seu e-mail, sua senha atual (os 6 últimos dígitos do celular, se ainda não
                 trocou) e a senha nova.
@@ -215,7 +239,7 @@ export default function Login() {
                   onChange={(e) => setCpEmail(e.target.value)}
                   required
                   autoComplete="email"
-                  className="w-full px-3 py-3 rounded-md border-2 border-bloco-ink bg-white text-sm focus:outline-none focus:ring-2 focus:ring-bloco-primary"
+                  className="w-full px-3 py-3 rounded-md border-2 border-bloco-ink bg-white text-sm transition-shadow duration-150 focus:outline-none focus:ring-2 focus:ring-bloco-primary"
                 />
               </div>
               <div>
@@ -229,7 +253,7 @@ export default function Login() {
                   onChange={(e) => setCpCurrent(e.target.value)}
                   required
                   autoComplete="current-password"
-                  className="w-full px-3 py-3 rounded-md border-2 border-bloco-ink bg-white text-sm focus:outline-none focus:ring-2 focus:ring-bloco-primary"
+                  className="w-full px-3 py-3 rounded-md border-2 border-bloco-ink bg-white text-sm transition-shadow duration-150 focus:outline-none focus:ring-2 focus:ring-bloco-primary"
                 />
               </div>
               <div>
@@ -243,7 +267,7 @@ export default function Login() {
                   onChange={(e) => setCpNew(e.target.value)}
                   required
                   autoComplete="new-password"
-                  className="w-full px-3 py-3 rounded-md border-2 border-bloco-ink bg-white text-sm focus:outline-none focus:ring-2 focus:ring-bloco-primary"
+                  className="w-full px-3 py-3 rounded-md border-2 border-bloco-ink bg-white text-sm transition-shadow duration-150 focus:outline-none focus:ring-2 focus:ring-bloco-primary"
                 />
               </div>
               <div>
@@ -257,16 +281,17 @@ export default function Login() {
                   onChange={(e) => setCpConfirm(e.target.value)}
                   required
                   autoComplete="new-password"
-                  className="w-full px-3 py-3 rounded-md border-2 border-bloco-ink bg-white text-sm focus:outline-none focus:ring-2 focus:ring-bloco-primary"
+                  className="w-full px-3 py-3 rounded-md border-2 border-bloco-ink bg-white text-sm transition-shadow duration-150 focus:outline-none focus:ring-2 focus:ring-bloco-primary"
                 />
               </div>
-              {error && <p className="text-sm font-semibold text-bloco-red">{error}</p>}
+              {error && <p className="text-sm font-semibold text-bloco-red animate-pop-in">{error}</p>}
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full py-3.5 rounded-md border-[2.5px] border-bloco-ink bg-bloco-primary text-bloco-paper font-display text-sm tracking-wide shadow-hard disabled:opacity-50"
+                className="press w-full py-3.5 rounded-md border-[2.5px] border-bloco-ink bg-bloco-primary text-bloco-paper font-display text-sm tracking-wide shadow-hard disabled:opacity-50 inline-flex items-center justify-center gap-2"
               >
-                {busy ? '...' : 'TROCAR SENHA'}
+                {busy && <Spinner />}
+                {busy ? 'SALVANDO' : 'TROCAR SENHA'}
               </button>
             </form>
           )}

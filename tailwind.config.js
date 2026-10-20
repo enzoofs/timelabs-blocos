@@ -50,6 +50,81 @@ export default {
       backgroundImage: {
         halftone: 'radial-gradient(circle, rgba(124,58,237,0.5) 1.5px, transparent 1.6px)',
       },
+      // movimento: só transform/opacity (roda liso em Android barato) e
+      // com "peso" físico — combina com a sombra dura da identidade.
+      // Tudo é desligado em prefers-reduced-motion (ver index.css).
+      transitionTimingFunction: {
+        bounce: 'cubic-bezier(.34,1.56,.64,1)',
+        snap: 'cubic-bezier(.2,.8,.2,1)',
+      },
+      keyframes: {
+        'pop-in': {
+          '0%': { opacity: '0', transform: 'scale(.9)' },
+          '60%': { opacity: '1', transform: 'scale(1.04)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        rise: {
+          '0%': { opacity: '0', transform: 'translateY(12px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        wiggle: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '25%': { transform: 'rotate(-4deg)' },
+          '75%': { transform: 'rotate(4deg)' },
+        },
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '20%, 60%': { transform: 'translateX(-6px)' },
+          '40%, 80%': { transform: 'translateX(6px)' },
+        },
+        stamp: {
+          '0%': { opacity: '0', transform: 'scale(1.6) rotate(-8deg)' },
+          '55%': { opacity: '1', transform: 'scale(.94) rotate(2deg)' },
+          '100%': { opacity: '1', transform: 'scale(1) rotate(0deg)' },
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
+        'pulse-ring': {
+          '0%': { opacity: '.7', transform: 'scale(1)' },
+          '100%': { opacity: '0', transform: 'scale(2.6)' },
+        },
+        breathe: {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.03)' },
+        },
+        bob: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-8px)' },
+        },
+        scan: {
+          '0%': { transform: 'translateY(0)' },
+          '100%': { transform: 'translateY(var(--scan-distance, 280px))' },
+        },
+        draw: {
+          '0%': { strokeDashoffset: '24' },
+          '100%': { strokeDashoffset: '0' },
+        },
+        flash: {
+          '0%': { opacity: '.85' },
+          '100%': { opacity: '0' },
+        },
+      },
+      animation: {
+        'pop-in': 'pop-in .35s cubic-bezier(.34,1.56,.64,1) both',
+        rise: 'rise .35s cubic-bezier(.2,.8,.2,1) both',
+        wiggle: 'wiggle .5s ease-in-out',
+        shake: 'shake .4s ease-in-out',
+        stamp: 'stamp .45s cubic-bezier(.34,1.56,.64,1) both',
+        shimmer: 'shimmer 1.3s ease-in-out infinite',
+        'pulse-ring': 'pulse-ring 1.6s cubic-bezier(.2,.8,.2,1) infinite',
+        breathe: 'breathe 2s ease-in-out infinite',
+        bob: 'bob 1s ease-in-out infinite',
+        scan: 'scan 1.8s ease-in-out infinite alternate',
+        draw: 'draw .35s .25s ease-out both',
+        flash: 'flash .3s ease-out both',
+      },
     },
   },
   plugins: [],

@@ -148,7 +148,7 @@ export default function Relatorio() {
       <div className="grid grid-cols-3 gap-2 mb-4">
         <StatTile label="Membros" value={members.length} />
         <StatTile label="Ensaios" value={summary.closedCount} />
-        <StatTile label="Presença média" value={summary.avg === null ? '—' : `${summary.avg}%`} />
+        <StatTile label="Presença média" value={summary.avg} suffix="%" />
       </div>
 
       <Button

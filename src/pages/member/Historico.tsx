@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useBloco, useBlocoPath } from '../../lib/bloco'
 import { PageHeader, StatTile, Chip, type ChipTone } from '../../components/product/ui'
+import { Skeleton } from '../../components/Skeleton'
 
 type Event = {
   id: string
@@ -43,7 +44,7 @@ function formatTime(iso: string): string {
 const STATUS_META: Record<Row['status'], { label: string; tone: ChipTone }> = {
   present: { label: 'Presente', tone: 'ok' },
   absent: { label: 'Falta', tone: 'danger' },
-  live: { label: 'Em andamento', tone: 'warn' },
+  live: { label: 'Em andamento', tone: 'live' },
   future: { label: 'Futuro', tone: 'muted' },
 }
 
@@ -109,23 +110,36 @@ export default function MemberHistorico() {
     <div className="min-h-full bg-bloco-paper p-6 max-w-md mx-auto">
       <PageHeader backTo={blocoPath('/member')} title="Meu histórico" />
 
-      <div className="grid grid-cols-3 gap-2 mb-6">
+      <div className="grid grid-cols-3 gap-2 mb-3">
         <StatTile label="Presenças" value={stats.presentCount} />
         <StatTile label="Ensaios" value={stats.total} />
-        <StatTile label="% presença" value={stats.percent === null ? '—' : `${stats.percent}%`} />
+        <StatTile label="% presença" value={stats.percent} suffix="%" />
+      </div>
+
+      {/* barra de frequência: enche até a % de presença */}
+      <div className="h-3 mb-6 rounded-full border-2 border-bloco-ink bg-white overflow-hidden">
+        <div
+          className="h-full bg-bloco-primary origin-left transition-transform duration-700 ease-snap"
+          style={{ transform: `scaleX(${(stats.percent ?? 0) / 100})` }}
+        />
       </div>
 
       {loading ? (
-        <p className="text-sm text-bloco-muted">Carregando…</p>
+        <div className="space-y-2">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-[62px] border-2 border-stone-200" />
+          ))}
+        </div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-bloco-muted text-center py-6">Nenhum ensaio ainda.</p>
+        <p className="text-sm text-bloco-muted text-center py-6 animate-pop-in">Nenhum ensaio ainda.</p>
       ) : (
-        <ul className="space-y-2">
-          {rows.map((row) => {
+        <ul className="space-y-2 stagger">
+          {rows.map((row, i) => {
             const meta = STATUS_META[row.status]
             return (
               <li
                 key={row.event.id}
+                style={{ '--i': Math.min(i, 12) } as CSSProperties}
                 className="flex justify-between items-start gap-2 p-3 rounded-md bg-white border-2 border-bloco-ink"
               >
                 <div className="min-w-0">

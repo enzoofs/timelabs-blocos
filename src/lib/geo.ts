@@ -45,6 +45,7 @@ export function getCurrentPosition(options?: {
     let best: Coords | null = null
     let settled = false
     let watchId: number
+    let lastError: GeoError['code'] | null = null
 
     function finish() {
       if (settled) return
@@ -57,7 +58,8 @@ export function getCurrentPosition(options?: {
         // Conseguimos uma posição, mas imprecisa demais (localização aproximada).
         reject({ code: 'inaccurate', message: ERROR_MESSAGES.inaccurate } satisfies GeoError)
       } else {
-        reject({ code: 'timeout', message: ERROR_MESSAGES.timeout } satisfies GeoError)
+        const code = lastError ?? 'timeout'
+        reject({ code, message: ERROR_MESSAGES[code] } satisfies GeoError)
       }
     }
 
@@ -76,20 +78,20 @@ export function getCurrentPosition(options?: {
       },
       (err) => {
         if (settled) return
-        // Se já temos alguma leitura, deixa o timeout decidir; senão, falha agora.
-        if (best) return
-        settled = true
-        navigator.geolocation.clearWatch(watchId)
-        clearTimeout(timer)
-        const code: GeoError['code'] =
-          err.code === err.PERMISSION_DENIED
-            ? 'denied'
-            : err.code === err.POSITION_UNAVAILABLE
-              ? 'unavailable'
-              : err.code === err.TIMEOUT
-                ? 'timeout'
-                : 'unknown'
-        reject({ code, message: ERROR_MESSAGES[code] } satisfies GeoError)
+        // Só permissão negada é definitiva. "Indisponível" costuma ser
+        // passageiro — GPS frio, ou a página acabou de abrir pelo link do
+        // QR na câmera do sistema — e o watch continua ativo e entrega a
+        // posição logo depois. Antes isso derrubava o check-in na hora;
+        // agora espera até o nosso timeout e só então reporta o erro.
+        if (err.code === err.PERMISSION_DENIED) {
+          settled = true
+          navigator.geolocation.clearWatch(watchId)
+          clearTimeout(timer)
+          reject({ code: 'denied', message: ERROR_MESSAGES.denied } satisfies GeoError)
+          return
+        }
+        lastError =
+          err.code === err.POSITION_UNAVAILABLE ? 'unavailable' : err.code === err.TIMEOUT ? 'timeout' : 'unknown'
       },
       {
         enableHighAccuracy: true,

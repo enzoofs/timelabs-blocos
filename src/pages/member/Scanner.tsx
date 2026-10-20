@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Html5Qrcode } from 'html5-qrcode'
 import { useBlocoPath } from '../../lib/bloco'
+import { haptic, useRetrigger } from '../../lib/motion'
+import { unlockAudio } from '../../lib/sound'
 
 const READER_ID = 'qr-reader'
 
@@ -17,7 +19,7 @@ function extractToken(decoded: string): string | null {
   return null
 }
 
-type Phase = 'idle' | 'starting' | 'scanning' | 'error'
+type Phase = 'idle' | 'starting' | 'scanning' | 'found' | 'error'
 
 const FLAG_COLORS = ['bg-bloco-red', 'bg-bloco-accent', 'bg-bloco-green', 'bg-bloco-accent', 'bg-bloco-accent']
 
@@ -26,6 +28,8 @@ export default function Scanner() {
   const blocoPath = useBlocoPath()
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [badKey, triggerBad] = useRetrigger()
+  const badTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const navigatedRef = useRef(false)
 
@@ -47,6 +51,7 @@ export default function Scanner() {
   }, [])
 
   async function startCamera() {
+    unlockAudio()
     setError(null)
     setPhase('starting')
     try {
@@ -59,14 +64,29 @@ export default function Scanner() {
           if (navigatedRef.current) return
           const token = extractToken(decoded)
           if (!token) {
-            setError('QR não reconhecido. Use o QR do ensaio.')
+            // o callback dispara ~10x por segundo com o QR errado na frente:
+            // treme/vibra só na primeira leitura e vai adiando o "voltar ao
+            // normal" enquanto o QR errado continuar na mira
+            if (badTimerRef.current === undefined) {
+              setError('QR não reconhecido. Use o QR do ensaio.')
+              triggerBad()
+              haptic(80)
+            }
+            clearTimeout(badTimerRef.current)
+            badTimerRef.current = setTimeout(() => {
+              badTimerRef.current = undefined
+              setError(null)
+            }, 2000)
             return
           }
           navigatedRef.current = true
+          // mira fecha + flash antes de sair da tela: dá a sensação de "pegou"
+          setPhase('found')
+          haptic(30)
           qr.stop()
             .catch(() => {})
             .finally(() => {
-              navigate(blocoPath(`/checkin/${token}`))
+              setTimeout(() => navigate(blocoPath(`/checkin/${token}`)), 260)
             })
         },
         () => {
@@ -111,15 +131,43 @@ export default function Scanner() {
           className="w-full h-full [&_video]:!w-full [&_video]:!h-full [&_video]:!object-cover [&_video]:!min-w-0"
         />
 
-        {/* corner brackets, drawn with CSS so they scale with the frame */}
-        <div className="absolute inset-4 pointer-events-none z-10">
-          <span className="absolute top-0 left-0 w-9 h-9 border-t-[6px] border-l-[6px] border-bloco-accent rounded-tl-xl" />
-          <span className="absolute top-0 right-0 w-9 h-9 border-t-[6px] border-r-[6px] border-bloco-accent rounded-tr-xl" />
-          <span className="absolute bottom-0 left-0 w-9 h-9 border-b-[6px] border-l-[6px] border-bloco-accent rounded-bl-xl" />
-          <span className="absolute bottom-0 right-0 w-9 h-9 border-b-[6px] border-r-[6px] border-bloco-accent rounded-br-xl" />
+        {/* corner brackets, drawn with CSS so they scale with the frame.
+            Fecham pro centro quando o QR é lido; ficam vermelhas e tremem
+            com QR que não é de ensaio. */}
+        <div
+          key={badKey}
+          className={`absolute inset-4 pointer-events-none z-10 transition-transform duration-200 ease-bounce ${
+            phase === 'found' ? 'scale-[.82]' : ''
+          } ${badKey > 0 ? 'animate-shake' : ''}`}
+        >
+          {[
+            'top-0 left-0 border-t-[6px] border-l-[6px] rounded-tl-xl',
+            'top-0 right-0 border-t-[6px] border-r-[6px] rounded-tr-xl',
+            'bottom-0 left-0 border-b-[6px] border-l-[6px] rounded-bl-xl',
+            'bottom-0 right-0 border-b-[6px] border-r-[6px] rounded-br-xl',
+          ].map((pos) => (
+            <span
+              key={pos}
+              className={`absolute w-9 h-9 transition-colors duration-200 ${pos} ${
+                error && phase === 'scanning' ? 'border-bloco-red' : phase === 'found' ? 'border-bloco-green' : 'border-bloco-accent'
+              }`}
+            />
+          ))}
         </div>
 
-        {phase !== 'scanning' && (
+        {/* linha de varredura enquanto procura o QR */}
+        {phase === 'scanning' && (
+          <div className="absolute inset-x-6 top-6 bottom-6 pointer-events-none z-10 overflow-hidden [container-type:size]">
+            <div
+              className="h-0.5 w-full rounded-full bg-bloco-accent shadow-[0_0_12px_2px_var(--bloco-accent)] animate-scan"
+              style={{ '--scan-distance': 'calc(100cqh - 2px)' } as CSSProperties}
+            />
+          </div>
+        )}
+
+        {phase === 'found' && <div className="absolute inset-0 bg-white z-30 pointer-events-none animate-flash" />}
+
+        {(phase === 'idle' || phase === 'starting' || phase === 'error') && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
             {phase === 'starting' ? (
               <p className="text-sm font-semibold">Abrindo câmera…</p>
@@ -148,7 +196,11 @@ export default function Scanner() {
         </p>
       </div>
 
-      {error && <p className="text-sm font-semibold text-bloco-primary text-center mt-4 px-8">{error}</p>}
+      {error && (
+        <p key={badKey} className="text-sm font-semibold text-bloco-primary text-center mt-4 px-8 animate-pop-in">
+          {error}
+        </p>
+      )}
 
       <div className="mt-auto px-6 pb-9 pt-8 flex flex-col items-center gap-4 bg-gradient-to-t from-bloco-ink to-transparent">
         <div className="flex gap-1.5">
