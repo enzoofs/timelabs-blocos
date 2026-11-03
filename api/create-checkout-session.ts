@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { stripeAdmin } from '../server/stripeAdmin.js'
 import { supabaseAdmin } from '../server/supabaseAdmin.js'
-import { MONTHLY_PRICE, lumpSumPrice, monthsUntil, nextCarnaval } from '../src/lib/pricing.js'
+import { MONTHLY_PRICE, fixedDealFor, lumpSumPrice, monthsUntil, nextCarnaval } from '../src/lib/pricing.js'
 
 // Blocos que já estavam ativos antes de existir checkout (migrados
 // direto no banco) e agora precisam de uma cobrança retroativa. Só
@@ -55,8 +55,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
+  // Bloco com acordo fixo: só plano à vista, com meses e valor travados.
+  const deal = fixedDealFor(blocoSlug)
+  if (deal && plan !== 'lump_sum') {
+    res.status(400).json({ error: 'Para esse bloco, o pagamento é à vista até o Carnaval.' })
+    return
+  }
+
   // Recalcula os meses no servidor — nunca confia no que o cliente mandou.
-  const months = monthsUntil(nextCarnaval())
+  const carnaval = nextCarnaval()
+  const months = deal ? deal.months : monthsUntil(carnaval)
+  const lumpSumAmount = deal ? deal.price : lumpSumPrice(months)
+  // Acordo fixo vale até o fim do dia do Carnaval (e não "hoje + N meses",
+  // senão o bloco ganharia meses de graça por ter pago atrasado).
+  const dealPaidUntil = deal
+    ? new Date(carnaval.getFullYear(), carnaval.getMonth(), carnaval.getDate(), 23, 59, 59).toISOString()
+    : null
   const origin = (req.headers.origin as string) || `https://${req.headers.host}`
 
   try {
@@ -65,7 +79,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const session = await stripe.checkout.sessions.create({
       mode: plan === 'monthly' ? 'subscription' : 'payment',
       customer_email: email,
-      metadata: { blocoSlug, plan, months: String(months) },
+      metadata: {
+        blocoSlug,
+        plan,
+        months: String(months),
+        ...(dealPaidUntil ? { paidUntil: dealPaidUntil } : {}),
+      },
       line_items: [
         plan === 'monthly'
           ? {
@@ -82,7 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           : {
               price_data: {
                 currency: 'brl',
-                unit_amount: lumpSumPrice(months) * 100,
+                unit_amount: lumpSumAmount * 100,
                 product_data: {
                   name: `TimeLabs — ${blocoName} (até o Carnaval, ${months} ${months === 1 ? 'mês' : 'meses'})`,
                 },

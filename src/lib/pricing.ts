@@ -57,6 +57,21 @@ export function lumpSumPrice(
   return Math.max(monthly, Math.round(raw / 5) * 5)
 }
 
+// Acordos com valor travado: o bloco já usava o sistema antes de pagar,
+// então o plano à vista cobre desde o início do uso (e não a partir do
+// dia do pagamento). Só aceita plano à vista e vale até o Carnaval.
+export type FixedDeal = { months: number; price: number; coversFrom: string }
+
+const FIXED_DEALS: ReadonlyMap<string, FixedDeal> = new Map([
+  // Proposta enviada e sistema em uso desde setembro/2026: 5 meses até o Carnaval 2027.
+  ['abalo-caxi', { months: 5, price: 360, coversFrom: 'setembro de 2026' }],
+])
+
+/** Acordo fixo do bloco, se existir (Map evita pegar chaves tipo "__proto__"). */
+export function fixedDealFor(slug: string | undefined): FixedDeal | undefined {
+  return slug ? FIXED_DEALS.get(slug) : undefined
+}
+
 export function formatBRL(value: number): string {
   const hasCents = Math.round(value * 100) % 100 !== 0
   return value.toLocaleString('pt-BR', {

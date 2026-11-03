@@ -73,7 +73,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const paidUntil =
         session.mode === 'subscription'
           ? null // assinatura: fica ativo enquanto a cobrança recorrente estiver em dia
-          : new Date(Date.now() + months * 30 * 86_400_000).toISOString()
+          : // Acordo fixo manda a data final pronta (ver create-checkout-session)
+            session.metadata?.paidUntil ?? new Date(Date.now() + months * 30 * 86_400_000).toISOString()
 
       // O Stripe reenvia o mesmo evento se a resposta demorar ou falhar —
       // sessão já registrada nesse bloco = reentrega, não manda e-mail

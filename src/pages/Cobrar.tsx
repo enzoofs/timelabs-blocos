@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { createCheckoutSession, type CheckoutPlan } from '../lib/stripe'
-import { MONTHLY_PRICE, formatBRL, formatDatePtBR, lumpSumPrice, monthsUntil, nextCarnaval } from '../lib/pricing'
+import { MONTHLY_PRICE, fixedDealFor, formatBRL, formatDatePtBR, lumpSumPrice, monthsUntil, nextCarnaval } from '../lib/pricing'
 import { Button, Footer, Input, Label } from '../components/ui'
 
 type BlocoPublic = { id: string; name: string; slug: string }
@@ -16,13 +16,15 @@ export default function Cobrar() {
   const { blocoSlug } = useParams<{ blocoSlug: string }>()
   const [bloco, setBloco] = useState<BlocoPublic | 'loading' | 'not_found'>('loading')
   const [email, setEmail] = useState('')
-  const [plan, setPlan] = useState<CheckoutPlan>('monthly')
+  // Bloco com acordo fixo (ex: Abalô-Caxi) só tem o plano à vista, com valor travado.
+  const deal = fixedDealFor(blocoSlug)
+  const [plan, setPlan] = useState<CheckoutPlan>(deal ? 'lump_sum' : 'monthly')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const carnaval = useMemo(() => nextCarnaval(), [])
-  const months = useMemo(() => monthsUntil(carnaval), [carnaval])
-  const lumpSum = useMemo(() => lumpSumPrice(months), [months])
+  const months = deal ? deal.months : monthsUntil(carnaval)
+  const lumpSum = deal ? deal.price : lumpSumPrice(months)
 
   useEffect(() => {
     if (!blocoSlug || !ALLOWED_SLUGS.includes(blocoSlug)) {
@@ -55,7 +57,7 @@ export default function Cobrar() {
         plan,
         months,
       })
-      window.location.href = url
+      window.location.assign(url)
     } catch (err) {
       setBusy(false)
       setError(err instanceof Error ? err.message : 'Não foi possível iniciar o pagamento.')
@@ -98,19 +100,25 @@ export default function Cobrar() {
           <div>
             <Label>PLANO</Label>
             <div className="space-y-2">
-              <PlanOption
-                selected={plan === 'monthly'}
-                onSelect={() => setPlan('monthly')}
-                title="Mensal"
-                price={`${formatBRL(MONTHLY_PRICE)}/mês`}
-                detail="Cobrado todo mês, cancela quando quiser."
-              />
+              {!deal && (
+                <PlanOption
+                  selected={plan === 'monthly'}
+                  onSelect={() => setPlan('monthly')}
+                  title="Mensal"
+                  price={`${formatBRL(MONTHLY_PRICE)}/mês`}
+                  detail="Cobrado todo mês, cancela quando quiser."
+                />
+              )}
               <PlanOption
                 selected={plan === 'lump_sum'}
                 onSelect={() => setPlan('lump_sum')}
                 title={`Até o Carnaval (${months} ${months === 1 ? 'mês' : 'meses'})`}
                 price={formatBRL(lumpSum)}
-                detail={`Pagamento único, cobre até ${formatDatePtBR(carnaval)}. Economiza em relação ao mensal.`}
+                detail={
+                  deal
+                    ? `Pagamento único, cobre de ${deal.coversFrom} até ${formatDatePtBR(carnaval)}.`
+                    : `Pagamento único, cobre até ${formatDatePtBR(carnaval)}. Economiza em relação ao mensal.`
+                }
               />
             </div>
           </div>
