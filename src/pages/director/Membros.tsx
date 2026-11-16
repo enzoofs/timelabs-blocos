@@ -3,6 +3,8 @@ import { supabase } from '../../lib/supabase'
 import { useBloco, useBlocoPath, useRefreshBloco } from '../../lib/bloco'
 import { MemberImport } from '../../components/MemberImport'
 import { Button, Input, PageHeader } from '../../components/product/ui'
+import { GrupoPicker, GrupoTag } from '../../components/GrupoPicker'
+import type { FiltroGrupo, Grupo } from '../../lib/grupo'
 
 type Member = {
   id: string
@@ -12,6 +14,7 @@ type Member = {
   instrument: string | null
   auth_user_id: string | null
   role: 'member' | 'director'
+  grupo: Grupo
 }
 
 export default function Membros() {
@@ -20,6 +23,7 @@ export default function Membros() {
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [filtroGrupo, setFiltroGrupo] = useState<FiltroGrupo>('todos')
   const [editing, setEditing] = useState<Member | null>(null)
   const [adding, setAdding] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -30,7 +34,7 @@ export default function Membros() {
     setLoading(true)
     const { data, error } = await supabase
       .from('members')
-      .select('id, email, full_name, whatsapp, instrument, auth_user_id, role')
+      .select('id, email, full_name, whatsapp, instrument, auth_user_id, role, grupo')
       .eq('bloco_id', bloco.id)
       .order('full_name')
     if (error) console.error(error)
@@ -44,14 +48,15 @@ export default function Membros() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return members
-    return members.filter(
+    const doGrupo = filtroGrupo === 'todos' ? members : members.filter((m) => m.grupo === filtroGrupo)
+    if (!q) return doGrupo
+    return doGrupo.filter(
       (m) =>
         m.full_name.toLowerCase().includes(q) ||
         m.email.toLowerCase().includes(q) ||
         (m.instrument ?? '').toLowerCase().includes(q),
     )
-  }, [members, search])
+  }, [members, search, filtroGrupo])
 
   async function handleDelete(m: Member) {
     if (!confirm(`Remover ${m.full_name}? As presenças desse membro também serão apagadas.`)) {
@@ -120,6 +125,12 @@ export default function Membros() {
         </button>
       </div>
 
+      {bloco.tem_coral && (
+        <div className="mb-4">
+          <GrupoPicker comTodos value={filtroGrupo} onChange={setFiltroGrupo} />
+        </div>
+      )}
+
       {importing && (
         <MemberImport
           onCancel={() => setImporting(false)}
@@ -171,6 +182,7 @@ export default function Membros() {
                   {m.instrument && ` · ${m.instrument}`}
                 </p>
                 <div className="flex flex-wrap gap-1 mt-1">
+                  {bloco.tem_coral && <GrupoTag grupo={m.grupo} />}
                   {m.role === 'director' && (
                     <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-bloco-accent text-bloco-ink uppercase tracking-wide">
                       diretor
@@ -223,6 +235,7 @@ function MemberForm({ initial, onCancel, onSaved, onError }: FormProps) {
   const [whatsapp, setWhatsapp] = useState(initial?.whatsapp ?? '')
   const [instrument, setInstrument] = useState(initial?.instrument ?? '')
   const [role, setRole] = useState<Member['role']>(initial?.role ?? 'member')
+  const [grupo, setGrupo] = useState<Grupo>(initial?.grupo ?? 'bateria')
   const [busy, setBusy] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
@@ -233,8 +246,10 @@ function MemberForm({ initial, onCancel, onSaved, onError }: FormProps) {
       full_name: fullName.trim(),
       email: email.trim().toLowerCase(),
       whatsapp: whatsapp.trim(),
-      instrument: instrument.trim() || null,
+      // instrumento é coisa da bateria: quem vai pro coral fica sem
+      instrument: grupo === 'coral' ? null : instrument.trim() || null,
       role,
+      grupo,
     }
     const res = initial
       ? await supabase.from('members').update(payload).eq('id', initial.id)
@@ -281,18 +296,21 @@ function MemberForm({ initial, onCancel, onSaved, onError }: FormProps) {
           Obrigatório: os 6 últimos dígitos viram a senha inicial do login do membro.
         </p>
       </div>
-      <select
-        value={instrument}
-        onChange={(e) => setInstrument(e.target.value)}
-        className="w-full px-3 py-2.5 rounded-md border-2 border-bloco-ink bg-white text-sm focus:outline-none focus:ring-2 focus:ring-bloco-primary"
-      >
-        <option value="">Instrumento (opcional)</option>
-        {bloco.instruments.map((i) => (
-          <option key={i} value={i}>
-            {i}
-          </option>
-        ))}
-      </select>
+      {bloco.tem_coral && <GrupoPicker label="GRUPO" value={grupo} onChange={setGrupo} />}
+      {grupo === 'bateria' && (
+        <select
+          value={instrument}
+          onChange={(e) => setInstrument(e.target.value)}
+          className="w-full px-3 py-2.5 rounded-md border-2 border-bloco-ink bg-white text-sm focus:outline-none focus:ring-2 focus:ring-bloco-primary"
+        >
+          <option value="">Instrumento (opcional)</option>
+          {bloco.instruments.map((i) => (
+            <option key={i} value={i}>
+              {i}
+            </option>
+          ))}
+        </select>
+      )}
       <select
         value={role}
         onChange={(e) => setRole(e.target.value as Member['role'])}

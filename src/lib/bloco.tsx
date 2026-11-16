@@ -13,6 +13,7 @@ export type Bloco = {
   city: string | null
   theme: BlocoTheme
   instruments: string[]
+  tem_coral: boolean
 }
 
 type BlocoState =
@@ -36,7 +37,7 @@ export function BlocoProvider({ slug, children }: { slug: string; children: Reac
   async function load(): Promise<boolean> {
     const { data, error } = await supabase
       .from('blocos_public')
-      .select('id, slug, name, city, theme, instruments')
+      .select('id, slug, name, city, theme, instruments, tem_coral')
       .eq('slug', slug)
       .maybeSingle()
     if (error || !data) {

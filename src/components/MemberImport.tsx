@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import { useBloco } from '../lib/bloco'
 import { downloadCsv, parseCsvLine, toCsv } from '../lib/csv'
 import { Button } from './product/ui'
+import { GrupoPicker } from './GrupoPicker'
+import { GRUPO_LABEL, type Grupo } from '../lib/grupo'
 
 type ParsedRow = {
   full_name: string
@@ -15,6 +17,7 @@ type ParsedRow = {
 
 type Result = {
   inserted: number
+  moved: number
   skipped: number
 }
 
@@ -74,6 +77,8 @@ export function MemberImport({ onImportComplete, onCancel }: Props) {
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState<Result | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // grupo de quem está nessa planilha (só aparece em bloco com coral)
+  const [grupo, setGrupo] = useState<Grupo>('bateria')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const parsed = useMemo(() => parseInput(rawInput), [rawInput])
@@ -114,39 +119,57 @@ export function MemberImport({ onImportComplete, onCancel }: Props) {
     setError(null)
     setResult(null)
 
-    const { data: existing, error: e1 } = await supabase.from('members').select('email')
+    const { data: existing, error: e1 } = await supabase
+      .from('members')
+      .select('id, email, grupo')
+      .eq('bloco_id', bloco.id)
     if (e1) {
       setError(e1.message)
       setImporting(false)
       return
     }
-    const existingSet = new Set((existing ?? []).map((m) => m.email.toLowerCase()))
+    const existingByEmail = new Map((existing ?? []).map((m) => [m.email.toLowerCase(), m]))
 
-    const toInsert = dedupedValid.filter((r) => !existingSet.has(r.email))
-    const skipped = dedupedValid.length - toInsert.length
+    const toInsert = dedupedValid.filter((r) => !existingByEmail.has(r.email))
+    // Já cadastrado em outro grupo: muda pro grupo da planilha (ninguém
+    // fica nos dois). Presenças antigas continuam salvas.
+    const toMove = dedupedValid
+      .map((r) => existingByEmail.get(r.email))
+      .filter((m): m is { id: string; email: string; grupo: Grupo } => !!m && m.grupo !== grupo)
+    const skipped = dedupedValid.length - toInsert.length - toMove.length
 
-    if (toInsert.length === 0) {
-      setResult({ inserted: 0, skipped })
-      setImporting(false)
-      return
+    if (toMove.length > 0) {
+      const { error: eMove } = await supabase
+        .from('members')
+        .update(grupo === 'coral' ? { grupo, instrument: null } : { grupo })
+        .in('id', toMove.map((m) => m.id))
+      if (eMove) {
+        setError(eMove.message)
+        setImporting(false)
+        return
+      }
     }
 
-    const payload = toInsert.map((r) => ({
-      bloco_id: bloco.id,
-      full_name: r.full_name,
-      email: r.email,
-      whatsapp: r.whatsapp,
-      instrument: r.instrument,
-      role: 'member' as const,
-    }))
+    if (toInsert.length > 0) {
+      const payload = toInsert.map((r) => ({
+        bloco_id: bloco.id,
+        full_name: r.full_name,
+        email: r.email,
+        whatsapp: r.whatsapp,
+        instrument: grupo === 'coral' ? null : r.instrument,
+        role: 'member' as const,
+        grupo,
+      }))
 
-    const { error: e2 } = await supabase.from('members').insert(payload)
+      const { error: e2 } = await supabase.from('members').insert(payload)
+      if (e2) {
+        setImporting(false)
+        setError(e2.message)
+        return
+      }
+    }
     setImporting(false)
-    if (e2) {
-      setError(e2.message)
-      return
-    }
-    setResult({ inserted: toInsert.length, skipped })
+    setResult({ inserted: toInsert.length, moved: toMove.length, skipped })
     setRawInput('')
     await onImportComplete()
   }
@@ -177,6 +200,17 @@ export function MemberImport({ onImportComplete, onCancel }: Props) {
         direto — salve como CSV (Arquivo → Salvar como → CSV) ou selecione as células, copie e
         cole aqui em cima.
       </p>
+
+      {bloco.tem_coral && (
+        <div className="mb-3">
+          <GrupoPicker label="ESSA PLANILHA É DE" value={grupo} onChange={setGrupo} />
+          <p className="text-xs text-bloco-muted mt-1">
+            Quem já estiver cadastrado em outro grupo é movido pra{' '}
+            {grupo === 'coral' ? 'o coral' : 'a bateria'}.
+            {grupo === 'coral' && ' No coral a coluna de instrumento é ignorada.'}
+          </p>
+        </div>
+      )}
 
       <div className="flex gap-2 mb-3">
         <button
@@ -261,6 +295,13 @@ export function MemberImport({ onImportComplete, onCancel }: Props) {
             <strong>{result.inserted}</strong> membro{result.inserted === 1 ? '' : 's'} importado
             {result.inserted === 1 ? '' : 's'}.
           </p>
+          {result.moved > 0 && (
+            <p className="text-xs mt-1">
+              {result.moved} movido{result.moved === 1 ? '' : 's'} pro grupo{' '}
+              {GRUPO_LABEL[grupo]} (já estava{result.moved === 1 ? '' : 'm'} cadastrado
+              {result.moved === 1 ? '' : 's'} em outro grupo).
+            </p>
+          )}
           {result.skipped > 0 && (
             <p className="text-xs mt-1">
               {result.skipped} ignorado{result.skipped === 1 ? '' : 's'} (já existia

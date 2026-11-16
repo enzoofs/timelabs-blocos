@@ -54,6 +54,7 @@ export default function MemberHome() {
       .from('events')
       .select('id, name, starts_at, ends_at')
       .eq('bloco_id', bloco.id)
+      .eq('grupo', member.grupo) // diretor enxerga todos os grupos pelo RLS; aqui é só o dele
       .gt('ends_at', now)
       .order('starts_at', { ascending: true })
       .limit(1)

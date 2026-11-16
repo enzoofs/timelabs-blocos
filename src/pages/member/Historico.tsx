@@ -65,6 +65,7 @@ export default function MemberHistorico() {
         .from('events')
         .select('id, name, starts_at, ends_at')
         .eq('bloco_id', bloco.id)
+        .eq('grupo', member.grupo) // diretor enxerga todos os grupos pelo RLS; aqui é só o dele
         .order('starts_at', { ascending: false }),
       supabase
         .from('attendances')

@@ -47,6 +47,10 @@ const ERROR_LABELS: Record<string, { title: string; sub?: string }> = {
     title: 'Você já marcou presença',
     sub: 'Nesse ensaio sua presença já está registrada.',
   },
+  wrong_group: {
+    title: 'Ensaio de outro grupo',
+    sub: 'Esse ensaio não é do seu grupo. Se acha que é engano, fale com a diretoria.',
+  },
 }
 
 function PinIcon() {

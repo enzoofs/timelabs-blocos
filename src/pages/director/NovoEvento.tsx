@@ -5,6 +5,8 @@ import { useAuth } from '../../lib/auth'
 import { useBloco, useBlocoPath } from '../../lib/bloco'
 import { LocationPicker } from '../../components/LocationPicker'
 import { Button, Input, PageHeader } from '../../components/product/ui'
+import { GrupoPicker } from '../../components/GrupoPicker'
+import type { Grupo } from '../../lib/grupo'
 
 function toLocalInput(iso: string): string {
   const d = new Date(iso)
@@ -42,6 +44,7 @@ export default function NovoEvento() {
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
   const [radius, setRadius] = useState(150)
+  const [grupo, setGrupo] = useState<Grupo>('bateria')
 
   const [loading, setLoading] = useState(isEditing)
   const [busy, setBusy] = useState(false)
@@ -51,7 +54,7 @@ export default function NovoEvento() {
     if (!id) return
     supabase
       .from('events')
-      .select('name, starts_at, ends_at, latitude, longitude, radius_meters')
+      .select('name, starts_at, ends_at, latitude, longitude, radius_meters, grupo')
       .eq('id', id)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -64,6 +67,7 @@ export default function NovoEvento() {
           setLatitude(data.latitude)
           setLongitude(data.longitude)
           setRadius(data.radius_meters)
+          setGrupo(data.grupo as Grupo)
         }
         setLoading(false)
       })
@@ -85,6 +89,7 @@ export default function NovoEvento() {
       latitude,
       longitude,
       radius_meters: radius,
+      grupo,
     }
 
     if (isEditing) {
@@ -134,6 +139,16 @@ export default function NovoEvento() {
               required
             />
           </div>
+
+          {bloco.tem_coral && (
+            <div>
+              <GrupoPicker label="ENSAIO DE" value={grupo} onChange={setGrupo} />
+              <p className="text-xs text-bloco-muted mt-1">
+                Só quem é {grupo === 'coral' ? 'do coral' : 'da bateria'} vê esse ensaio e consegue
+                fazer check-in.
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>

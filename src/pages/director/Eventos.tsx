@@ -5,6 +5,8 @@ import { useAuth } from '../../lib/auth'
 import { useBloco, useBlocoPath } from '../../lib/bloco'
 import { AttendanceImport } from '../../components/AttendanceImport'
 import { Button, Chip, LinkButton, type ChipTone } from '../../components/product/ui'
+import { GrupoTag } from '../../components/GrupoPicker'
+import type { Grupo } from '../../lib/grupo'
 
 type Event = {
   id: string
@@ -12,6 +14,7 @@ type Event = {
   starts_at: string
   ends_at: string
   radius_meters: number
+  grupo: Grupo
 }
 
 function formatDateTime(iso: string): string {
@@ -47,7 +50,7 @@ export default function DirectorEventos() {
   async function reloadEvents() {
     const { data, error } = await supabase
       .from('events')
-      .select('id, name, starts_at, ends_at, radius_meters')
+      .select('id, name, starts_at, ends_at, radius_meters, grupo')
       .eq('bloco_id', bloco.id)
       .order('starts_at', { ascending: false })
     if (error) console.error(error)
@@ -206,6 +209,11 @@ export default function DirectorEventos() {
                   <div className="flex justify-between items-start gap-2">
                     <div>
                       <p className="font-bold text-bloco-ink">{ev.name}</p>
+                      {bloco.tem_coral && (
+                        <div className="mt-1">
+                          <GrupoTag grupo={ev.grupo} />
+                        </div>
+                      )}
                       <p className="text-xs text-bloco-muted mt-1">
                         {formatDateTime(ev.starts_at)} → {formatDateTime(ev.ends_at)}
                       </p>

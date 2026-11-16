@@ -3,12 +3,15 @@ import { supabase } from '../../lib/supabase'
 import { useBloco, useBlocoPath } from '../../lib/bloco'
 import { downloadXlsx } from '../../lib/csv'
 import { Button, PageHeader, StatTile } from '../../components/product/ui'
+import { GrupoPicker } from '../../components/GrupoPicker'
+import type { Grupo } from '../../lib/grupo'
 
 type Member = {
   id: string
   full_name: string
   email: string
   instrument: string | null
+  grupo: Grupo
 }
 
 type Event = {
@@ -16,6 +19,7 @@ type Event = {
   name: string
   starts_at: string
   ends_at: string
+  grupo: Grupo
 }
 
 type Attendance = {
@@ -49,12 +53,15 @@ export default function Relatorio() {
   const [attendances, setAttendances] = useState<Attendance[]>([])
   const [loading, setLoading] = useState(true)
   const [sort, setSort] = useState<'name' | 'percent_desc' | 'percent_asc'>('percent_desc')
+  // Relatório é sempre de um grupo só: misturar daria % errado (coral
+  // levaria falta em ensaio da bateria). Sem coral, tudo é bateria.
+  const [grupo, setGrupo] = useState<Grupo>('bateria')
 
   useEffect(() => {
     let cancelled = false
     Promise.all([
-      supabase.from('members').select('id, full_name, email, instrument').eq('bloco_id', bloco.id).order('full_name'),
-      supabase.from('events').select('id, name, starts_at, ends_at').eq('bloco_id', bloco.id).order('starts_at'),
+      supabase.from('members').select('id, full_name, email, instrument, grupo').eq('bloco_id', bloco.id).order('full_name'),
+      supabase.from('events').select('id, name, starts_at, ends_at, grupo').eq('bloco_id', bloco.id).order('starts_at'),
       supabase.from('attendances').select('member_id, event_id, source').eq('bloco_id', bloco.id),
     ]).then(([mRes, eRes, aRes]) => {
       if (cancelled) return
@@ -68,24 +75,29 @@ export default function Relatorio() {
     }
   }, [])
 
+  const groupMembers = useMemo(() => members.filter((m) => m.grupo === grupo), [members, grupo])
+  const groupEvents = useMemo(() => events.filter((e) => e.grupo === grupo), [events, grupo])
+
   const summary = useMemo(() => {
     const now = new Date()
     // "closed" = ensaios que já começaram, pra contar presença assim que é marcada
     // (sem esperar o ensaio encerrar — igual ao histórico do membro)
-    const closed = events.filter((e) => new Date(e.starts_at) <= now)
+    const closed = groupEvents.filter((e) => new Date(e.starts_at) <= now)
+    const closedIds = new Set(closed.map((e) => e.id))
     const attendanceSet = new Set(attendances.map((a) => `${a.member_id}:${a.event_id}`))
 
-    const memberStats = members.map((m) => {
-      const present = attendances.filter((a) => a.member_id === m.id).length
+    const memberStats = groupMembers.map((m) => {
+      // só presença em ensaio do grupo conta (quem trocou de grupo não passa de 100%)
+      const present = attendances.filter((a) => a.member_id === m.id && closedIds.has(a.event_id)).length
       const total = closed.length
       const percent = total === 0 ? null : Math.round((present / total) * 100)
       return { member: m, present, total, percent }
     })
 
     const avg =
-      closed.length === 0 || members.length === 0
+      closed.length === 0 || groupMembers.length === 0
         ? null
-        : Math.round(memberStats.reduce((sum, s) => sum + (s.percent ?? 0), 0) / members.length)
+        : Math.round(memberStats.reduce((sum, s) => sum + (s.percent ?? 0), 0) / groupMembers.length)
 
     const sorted = [...memberStats].sort((a, b) => {
       if (sort === 'name') return a.member.full_name.localeCompare(b.member.full_name, 'pt-BR')
@@ -95,7 +107,7 @@ export default function Relatorio() {
     })
 
     return { memberStats: sorted, closedCount: closed.length, avg, attendanceSet }
-  }, [members, events, attendances, sort])
+  }, [groupMembers, groupEvents, attendances, sort])
 
   async function handleExportXlsx() {
     const header = [
@@ -105,7 +117,7 @@ export default function Relatorio() {
       '% Presença',
       'Presenças',
       'Total (encerrados)',
-      ...events.map((e) => {
+      ...groupEvents.map((e) => {
         const d = new Date(e.starts_at).toLocaleDateString('pt-BR', {
           day: '2-digit',
           month: '2-digit',
@@ -123,7 +135,7 @@ export default function Relatorio() {
         stat.percent === null ? '' : `${stat.percent}%`,
         stat.present,
         stat.total,
-        ...events.map((e) => {
+        ...groupEvents.map((e) => {
           const has = summary.attendanceSet.has(`${stat.member.id}:${e.id}`)
           return CELL_LABEL[cellStatus(e, has)]
         }),
@@ -132,11 +144,12 @@ export default function Relatorio() {
     }
 
     const date = new Date().toISOString().slice(0, 10)
-    await downloadXlsx(`relatorio-presencas-${date}.xlsx`, [
+    const sufixo = bloco.tem_coral ? `-${grupo}` : ''
+    await downloadXlsx(`relatorio-presencas${sufixo}-${date}.xlsx`, [
       {
         name: 'Resumo',
         rows,
-        columnWidths: [28, 32, 16, 12, 12, 18, ...events.map(() => 22)],
+        columnWidths: [28, 32, 16, 12, 12, 18, ...groupEvents.map(() => 22)],
       },
     ])
   }
@@ -145,15 +158,21 @@ export default function Relatorio() {
     <div className="min-h-full bg-bloco-paper p-6 max-w-md mx-auto">
       <PageHeader backTo={blocoPath('/director')} title="Relatório consolidado" />
 
+      {bloco.tem_coral && (
+        <div className="mb-4">
+          <GrupoPicker value={grupo} onChange={setGrupo} />
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-2 mb-4">
-        <StatTile label="Membros" value={members.length} />
+        <StatTile label="Membros" value={groupMembers.length} />
         <StatTile label="Ensaios" value={summary.closedCount} />
         <StatTile label="Presença média" value={summary.avg} suffix="%" />
       </div>
 
       <Button
         onClick={handleExportXlsx}
-        disabled={loading || members.length === 0}
+        disabled={loading || groupMembers.length === 0}
         className="w-full py-3 mb-6"
       >
         EXPORTAR PLANILHA (EXCEL)

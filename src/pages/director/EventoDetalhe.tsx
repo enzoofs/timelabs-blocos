@@ -5,6 +5,8 @@ import { useBloco, useBlocoPath } from '../../lib/bloco'
 import { QRDisplay } from '../../components/QRDisplay'
 import { downloadXlsx, slugify } from '../../lib/csv'
 import { Button, LinkButton, PageHeader } from '../../components/product/ui'
+import { GrupoTag } from '../../components/GrupoPicker'
+import type { Grupo } from '../../lib/grupo'
 
 type Event = {
   id: string
@@ -15,6 +17,7 @@ type Event = {
   longitude: number
   radius_meters: number
   qr_token: string
+  grupo: Grupo
 }
 
 type Member = {
@@ -22,6 +25,7 @@ type Member = {
   full_name: string
   email: string
   instrument: string | null
+  grupo: Grupo
 }
 
 type Attendance = {
@@ -86,7 +90,7 @@ export default function EventoDetalhe() {
       const [membersRes, attendancesRes] = await Promise.all([
         supabase
           .from('members')
-          .select('id, full_name, email, instrument')
+          .select('id, full_name, email, instrument, grupo')
           .eq('bloco_id', bloco.id)
           .order('full_name'),
         supabase
@@ -139,17 +143,25 @@ export default function EventoDetalhe() {
     }
   }, [id])
 
+  // Só os membros do grupo do ensaio (bateria/coral) entram em faltantes,
+  // na contagem e na exportação. Presentes vêm de todos os membros, pra
+  // quem mudou de grupo depois não sumir da lista de quem foi.
+  const groupMembers = useMemo(
+    () => (event ? members.filter((m) => m.grupo === event.grupo) : []),
+    [members, event],
+  )
+
   const { present, absent } = useMemo(() => {
     const presentIds = new Set(attendances.map((a) => a.member_id))
     const memberById = new Map(members.map((m) => [m.id, m]))
     const present = attendances
       .map((a) => ({ ...a, member: memberById.get(a.member_id) }))
       .filter((x): x is Attendance & { member: Member } => !!x.member)
-    const absent = members
+    const absent = groupMembers
       .filter((m) => !presentIds.has(m.id))
       .sort((a, b) => a.full_name.localeCompare(b.full_name, 'pt-BR'))
     return { present, absent }
-  }, [members, attendances])
+  }, [members, groupMembers, attendances])
 
   async function handleRemovePresenca(attendanceId: string, memberName: string) {
     if (!confirm(`Remover a presença de ${memberName} nesse ensaio? Isso não pode ser desfeito.`)) {
@@ -184,7 +196,10 @@ export default function EventoDetalhe() {
     const rows: (string | number)[][] = [
       ['Nome', 'E-mail', 'Instrumento', 'Status', 'Horário', 'Origem', 'Distância (m)'],
     ]
-    const sorted = [...members].sort((a, b) => a.full_name.localeCompare(b.full_name, 'pt-BR'))
+    const presentIds = new Set(attendances.map((a) => a.member_id))
+    const sorted = members
+      .filter((m) => m.grupo === event.grupo || presentIds.has(m.id))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, 'pt-BR'))
     for (const m of sorted) {
       const att = attendances.find((a) => a.member_id === m.id)
       if (att) {
@@ -237,6 +252,12 @@ export default function EventoDetalhe() {
           title={event.name}
           subtitle={
             <>
+              {bloco.tem_coral && (
+                <>
+                  <GrupoTag grupo={event.grupo} />
+                  <br />
+                </>
+              )}
               {formatDateTime(event.starts_at)} → {formatDateTime(event.ends_at)}
               <br />
               Raio: {event.radius_meters}m · {event.latitude.toFixed(5)}, {event.longitude.toFixed(5)}
@@ -272,7 +293,7 @@ export default function EventoDetalhe() {
           <h2 className="font-display text-xs tracking-wide text-bloco-ink">
             PRESENÇAS{' '}
             <span className="text-bloco-muted font-sans font-normal normal-case">
-              · {present.length} de {members.length}
+              · {present.length} de {groupMembers.length}
             </span>
           </h2>
           <button

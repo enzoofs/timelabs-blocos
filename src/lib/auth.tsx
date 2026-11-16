@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import { useBloco } from './bloco'
+import type { Grupo } from './grupo'
 
 export type Member = {
   id: string
@@ -12,6 +13,7 @@ export type Member = {
   whatsapp: string
   instrument: string | null
   role: 'member' | 'director'
+  grupo: Grupo
 }
 
 type AuthState = {
