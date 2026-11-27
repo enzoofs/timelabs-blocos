@@ -4,9 +4,9 @@ import { supabase } from '../../lib/supabase'
 import { useBloco, useBlocoPath } from '../../lib/bloco'
 import { QRDisplay } from '../../components/QRDisplay'
 import { downloadXlsx, slugify } from '../../lib/csv'
-import { Button, LinkButton, PageHeader } from '../../components/product/ui'
+import { Button, Input, LinkButton, PageHeader } from '../../components/product/ui'
 import { GrupoTag } from '../../components/GrupoPicker'
-import type { Grupo } from '../../lib/grupo'
+import { GRUPO_LABEL, type Grupo } from '../../lib/grupo'
 
 type Event = {
   id: string
@@ -48,6 +48,11 @@ function formatDateTime(iso: string): string {
   })
 }
 
+// Minúsculo e sem acento, pra busca achar "joao" em "João"
+function normalizar(texto: string): string {
+  return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('pt-BR', {
     hour: '2-digit',
@@ -67,6 +72,7 @@ export default function EventoDetalhe() {
   const [members, setMembers] = useState<Member[]>([])
   const [attendances, setAttendances] = useState<Attendance[]>([])
   const [markingIds, setMarkingIds] = useState<Set<string>>(new Set())
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     if (!id) return
@@ -157,11 +163,24 @@ export default function EventoDetalhe() {
     const present = attendances
       .map((a) => ({ ...a, member: memberById.get(a.member_id) }))
       .filter((x): x is Attendance & { member: Member } => !!x.member)
+      .sort((a, b) => a.member.full_name.localeCompare(b.member.full_name, 'pt-BR'))
     const absent = groupMembers
       .filter((m) => !presentIds.has(m.id))
       .sort((a, b) => a.full_name.localeCompare(b.full_name, 'pt-BR'))
     return { present, absent }
   }, [members, groupMembers, attendances])
+
+  // Busca do diretor: filtra presentes e faltantes por nome ou instrumento
+  const { presentShown, absentShown } = useMemo(() => {
+    const q = normalizar(search.trim())
+    if (!q) return { presentShown: present, absentShown: absent }
+    const bate = (m: Member) =>
+      normalizar(m.full_name).includes(q) || normalizar(m.instrument ?? '').includes(q)
+    return {
+      presentShown: present.filter((p) => bate(p.member)),
+      absentShown: absent.filter(bate),
+    }
+  }, [present, absent, search])
 
   async function handleRemovePresenca(attendanceId: string, memberName: string) {
     if (!confirm(`Remover a presença de ${memberName} nesse ensaio? Isso não pode ser desfeito.`)) {
@@ -193,8 +212,19 @@ export default function EventoDetalhe() {
 
   async function handleExportXlsx() {
     if (!event) return
+    // Coluna Grupo só em bloco com coral (nos outros todo mundo é bateria)
+    const comGrupo = bloco.tem_coral
     const rows: (string | number)[][] = [
-      ['Nome', 'E-mail', 'Instrumento', 'Status', 'Horário', 'Origem', 'Distância (m)'],
+      [
+        'Nome',
+        'E-mail',
+        'Instrumento',
+        ...(comGrupo ? ['Grupo'] : []),
+        'Status',
+        'Horário',
+        'Origem',
+        'Distância (m)',
+      ],
     ]
     const presentIds = new Set(attendances.map((a) => a.member_id))
     const sorted = members
@@ -207,6 +237,7 @@ export default function EventoDetalhe() {
           m.full_name,
           m.email,
           m.instrument ?? '',
+          ...(comGrupo ? [GRUPO_LABEL[m.grupo]] : []),
           'Presente',
           new Date(att.checked_in_at).toLocaleString('pt-BR', {
             day: '2-digit',
@@ -220,7 +251,16 @@ export default function EventoDetalhe() {
           att.distance_meters ?? '',
         ])
       } else {
-        rows.push([m.full_name, m.email, m.instrument ?? '', 'Falta', '', '', ''])
+        rows.push([
+          m.full_name,
+          m.email,
+          m.instrument ?? '',
+          ...(comGrupo ? [GRUPO_LABEL[m.grupo]] : []),
+          'Falta',
+          '',
+          '',
+          '',
+        ])
       }
     }
     const date = event.starts_at.slice(0, 10)
@@ -228,7 +268,7 @@ export default function EventoDetalhe() {
       {
         name: 'Presenças',
         rows,
-        columnWidths: [28, 32, 16, 12, 18, 10, 14],
+        columnWidths: [28, 32, 16, ...(comGrupo ? [10] : []), 12, 18, 10, 14],
       },
     ])
   }
@@ -304,6 +344,14 @@ export default function EventoDetalhe() {
           </button>
         </div>
 
+        <Input
+          type="search"
+          placeholder="Buscar membro por nome ou instrumento"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="mb-3"
+        />
+
         <div className="flex gap-1 mb-3 bg-white border-2 border-bloco-ink p-1 rounded-md">
           <button
             onClick={() => setTab('present')}
@@ -328,9 +376,13 @@ export default function EventoDetalhe() {
             <p className="text-sm text-bloco-muted text-center py-6">
               Ninguém marcou presença ainda.
             </p>
+          ) : presentShown.length === 0 ? (
+            <p className="text-sm text-bloco-muted text-center py-6">
+              Ninguém com esse nome entre os presentes.
+            </p>
           ) : (
             <ul className="space-y-1">
-              {present.map((p) => (
+              {presentShown.map((p) => (
                 <li
                   key={p.id}
                   className="flex justify-between items-center px-3 py-2 rounded-md bg-white border-2 border-bloco-ink"
@@ -363,9 +415,13 @@ export default function EventoDetalhe() {
         {tab === 'absent' &&
           (absent.length === 0 ? (
             <p className="text-sm text-bloco-muted text-center py-6">Todos presentes!</p>
+          ) : absentShown.length === 0 ? (
+            <p className="text-sm text-bloco-muted text-center py-6">
+              Ninguém com esse nome entre os faltantes.
+            </p>
           ) : (
             <ul className="space-y-1">
-              {absent.map((m) => {
+              {absentShown.map((m) => {
                 const marking = markingIds.has(m.id)
                 return (
                   <li

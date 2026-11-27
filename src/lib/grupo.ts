@@ -11,5 +11,15 @@ export const GRUPO_LABEL: Record<Grupo, string> = {
   coral: 'Coral',
 }
 
+// Lê o grupo escrito numa célula da planilha ("Bateria", "coral", "Coral ").
+// Vazio → null (vale o grupo escolhido na tela). Texto desconhecido → 'invalido'.
+export function parseGrupo(texto: string): Grupo | null | 'invalido' {
+  const t = texto.trim().toLowerCase()
+  if (!t) return null
+  if (t === 'bateria') return 'bateria'
+  if (t === 'coral') return 'coral'
+  return 'invalido'
+}
+
 // Seletor de grupo nas telas do diretor: 'todos' + os grupos
 export type FiltroGrupo = Grupo | 'todos'

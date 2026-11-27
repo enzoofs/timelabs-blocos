@@ -4,7 +4,7 @@ import { useBloco, useBlocoPath } from '../../lib/bloco'
 import { downloadXlsx } from '../../lib/csv'
 import { Button, PageHeader, StatTile } from '../../components/product/ui'
 import { GrupoPicker } from '../../components/GrupoPicker'
-import type { Grupo } from '../../lib/grupo'
+import { GRUPO_LABEL, type Grupo } from '../../lib/grupo'
 
 type Member = {
   id: string
@@ -110,10 +110,13 @@ export default function Relatorio() {
   }, [groupMembers, groupEvents, attendances, sort])
 
   async function handleExportXlsx() {
+    // Coluna Grupo só em bloco com coral (nos outros todo mundo é bateria)
+    const comGrupo = bloco.tem_coral
     const header = [
       'Nome',
       'E-mail',
       'Instrumento',
+      ...(comGrupo ? ['Grupo'] : []),
       '% Presença',
       'Presenças',
       'Total (encerrados)',
@@ -132,6 +135,7 @@ export default function Relatorio() {
         stat.member.full_name,
         stat.member.email,
         stat.member.instrument ?? '',
+        ...(comGrupo ? [GRUPO_LABEL[stat.member.grupo]] : []),
         stat.percent === null ? '' : `${stat.percent}%`,
         stat.present,
         stat.total,
@@ -149,7 +153,16 @@ export default function Relatorio() {
       {
         name: 'Resumo',
         rows,
-        columnWidths: [28, 32, 16, 12, 12, 18, ...groupEvents.map(() => 22)],
+        columnWidths: [
+          28,
+          32,
+          16,
+          ...(comGrupo ? [10] : []),
+          12,
+          12,
+          18,
+          ...groupEvents.map(() => 22),
+        ],
       },
     ])
   }
