@@ -4,7 +4,8 @@ import { useBloco, useBlocoPath, useRefreshBloco } from '../../lib/bloco'
 import { MemberImport } from '../../components/MemberImport'
 import { Button, Input, PageHeader } from '../../components/product/ui'
 import { GrupoPicker, GrupoTag } from '../../components/GrupoPicker'
-import type { FiltroGrupo, Grupo } from '../../lib/grupo'
+import { GRUPO_LABEL, type FiltroGrupo, type Grupo } from '../../lib/grupo'
+import { downloadCsv, slugify, toCsv } from '../../lib/csv'
 
 type Member = {
   id: string
@@ -57,6 +58,22 @@ export default function Membros() {
         (m.instrument ?? '').toLowerCase().includes(q),
     )
   }, [members, search, filtroGrupo])
+
+  // Exporta no mesmo formato do modelo de importação, pra editar e subir de volta.
+  // CSV (não .xlsx) porque a importação só lê CSV.
+  function handleExport() {
+    const comGrupo = bloco.tem_coral
+    const header = ['Nome', 'Email', 'WhatsApp', 'Instrumento', ...(comGrupo ? ['Grupo'] : [])]
+    const rows = members.map((m) => [
+      m.full_name,
+      m.email,
+      m.whatsapp,
+      m.instrument ?? '',
+      ...(comGrupo ? [GRUPO_LABEL[m.grupo]] : []),
+    ])
+    const date = new Date().toISOString().slice(0, 10)
+    downloadCsv(`membros-${slugify(bloco.name)}-${date}.csv`, toCsv([header, ...rows]))
+  }
 
   async function handleDelete(m: Member) {
     if (!confirm(`Remover ${m.full_name}? As presenças desse membro também serão apagadas.`)) {
@@ -122,6 +139,13 @@ export default function Membros() {
           className="text-xs font-bold text-bloco-accent-text"
         >
           {managingInstruments ? 'FECHAR INSTRUMENTOS' : 'GERENCIAR INSTRUMENTOS'}
+        </button>
+        <button
+          onClick={handleExport}
+          disabled={members.length === 0}
+          className="text-xs font-bold text-bloco-accent-text disabled:opacity-50"
+        >
+          EXPORTAR PLANILHA DE MEMBROS
         </button>
       </div>
 
